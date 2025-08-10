@@ -30,8 +30,9 @@ PaintableBall을 상속받아 움직임 기능을 추가합니다:
 - `velocity`: 속도 벡터 (Vector2D)
 
 **생성자:**
+- 2개 매개변수: center, radius (속도는 영벡터로 초기화, 색은 PointableBall의 기본값)
 - 3개 매개변수: center, radius, color (속도는 영벡터로 초기화)
-- 5개 매개변수: center, radius, color, velocity (모든 속성 지정)
+- 4개 매개변수: center, radius, color, velocity (모든 속성 지정)
 
 **추가 메서드:**
 - `getVelocity()`: 속도 벡터 반환
@@ -44,14 +45,19 @@ PaintableBall을 상속받아 움직임 기능을 추가합니다:
 public class MovableBall extends PaintableBall {
     private Vector2D velocity;
 
+    public MovableBall(Point center, double radius) {
+        super(center, radius);
+        // 속도 초기화
+    }
+
     public MovableBall(Point center, double radius, Color color) {
         super(center, radius, color);
-        this.velocity = new Vector2D(0, 0);
+        // 속도 초기화
     }
 
     public MovableBall(Point center, double radius, Color color, Vector2D velocity) {
         super(center, radius, color);
-        this.velocity = velocity;
+        // 속도 초기화
     }
 
     // 시간 기반 이동
@@ -63,7 +69,8 @@ public class MovableBall extends PaintableBall {
     }
 
     public void move() {
-        move(1.0 / 60.0); // 기본 60 FPS 가정
+        // 기본 60 FPS 가정
+        // 메서드 활용
     }
 }
 ```
