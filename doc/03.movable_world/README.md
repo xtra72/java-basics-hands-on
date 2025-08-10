@@ -76,6 +76,11 @@ JavaFX에서 제공하는 게임 루프 클래스입니다:
 
 AnimationTimer를 상속받아 게임 루프를 구현합니다:
 
+**중요 참고사항:**
+- AnimationTimer는 JavaFX UI 스레드에서만 동작합니다
+- 따라서 단위 테스트(JUnit)로는 테스트할 수 없습니다
+- 실제 JavaFX 애플리케이션 실행을 통해서만 동작 확인이 가능합니다
+
 **필드:**
 - `lastUpdate`: 이전 프레임의 시간 (나노초)
 - `world`: World 객체 참조
@@ -151,7 +156,68 @@ double deltaTime = (now - lastUpdate) / 1_000_000_000.0;
 // 내적 = x₁×x₂ + y₁×y₂
 ```
 
-### 3.4 개선된 MovableBall with Vector
+### 3.4 MovableWorld 클래스 설계
+
+**MovableWorld 클래스란?**
+
+MovableWorld는 World 클래스를 상속받아 움직이는 공들을 관리하는 확장된 세계입니다:
+
+**상속 구조:**
+```
+World (기본 세계)
+  ↓ 상속
+MovableWorld (움직이는 공들을 관리하는 세계)
+```
+
+**MovableWorld의 역할:**
+1. **움직이는 공들의 위치 업데이트**: 모든 MovableBall의 이동을 관리
+2. **프레임 단위 시뮬레이션**: 매 프레임마다 물리 업데이트 수행
+3. **렌더링 최적화**: 움직이는 객체들의 효율적인 그리기
+
+**클래스 설계:**
+
+**생성자:**
+```java
+public MovableWorld(double width, double height) {
+    super(width, height); // 부모 클래스 생성자 호출
+}
+```
+
+**추가 메서드:**
+```java
+public void update(double deltaTime) {
+    // 모든 공들의 위치 업데이트
+    // 각 공이 MovableBall인지 확인하고 move() 호출
+}
+```
+
+**update() 메서드 구현 힌트:**
+```java
+// instanceof를 사용하여 MovableBall 타입 확인
+for (Ball ball : balls) {
+    if (ball instanceof MovableBall) {
+        MovableBall movableBall = (MovableBall) ball;
+        movableBall.move(deltaTime);
+    }
+}
+```
+
+**MovableWorld 사용 예시:**
+```java
+// MovableWorld 생성
+MovableWorld world = new MovableWorld(800, 600);
+
+// 움직이는 공 추가
+MovableBall ball = new MovableBall(100, 100, 20);
+ball.setDx(50); // x 방향 속도
+ball.setDy(30); // y 방향 속도
+world.addBall(ball);
+
+// 게임 루프에서 업데이트
+world.update(0.016); // 약 60FPS (1/60초)
+```
+
+### 3.5 개선된 MovableBall with Vector
 
 **물리 시뮬레이션 기초**
 
@@ -614,70 +680,39 @@ public class MovableBallTest {
 }
 ```
 
-### GameLoop 클래스 테스트
+### GameLoop 클래스 테스트에 대한 중요 참고사항
 
+**GameLoop는 AnimationTimer를 상속받는 클래스로, 단위 테스트가 불가능합니다.**
+
+**이유:**
+- AnimationTimer는 JavaFX의 UI 스레드(JavaFX Application Thread)에서만 실행됩니다
+- JUnit 테스트 환경에서는 JavaFX UI 스레드가 실행되지 않습니다
+- `start()`, `stop()`, `handle()` 메서드 호출 시 다음과 같은 예외가 발생합니다:
+  ```
+  java.lang.IllegalStateException: Not on FX application thread
+  ```
+
+**대안:**
+1. **통합 테스트**: 실제 JavaFX 애플리케이션을 실행하면서 테스트
+2. **수동 테스트**: 애플리케이션을 실행하여 직접 동작 확인
+3. **TestFX 프레임워크**: JavaFX 애플리케이션 테스트 전용 프레임워크 사용
+
+**GameLoop 클래스 구현 시 검증 방법:**
 ```java
-import javafx.scene.canvas.GraphicsContext;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import static org.junit.jupiter.api.Assertions.*;
-
-public class GameLoopTest {
+// MovableWorldApp의 start() 메서드에서 직접 확인
+@Override
+public void start(Stage stage) {
+    // ... 초기화 코드 ...
     
-    private GameLoop gameLoop;
-    private MovableWorld world;
-    private GraphicsContext gc;
+    GameLoop gameLoop = new GameLoop(world, gc);
     
-    @BeforeEach
-    public void setUp() {
-        world = new MovableWorld(800, 600);
-        gc = Mockito.mock(GraphicsContext.class);
-        gameLoop = new GameLoop(world, gc);
-    }
+    // FPS 표시를 통해 게임 루프 동작 확인
+    Label fpsLabel = new Label("FPS: 0");
+    gameLoop.setFpsListener(fps -> 
+        Platform.runLater(() -> fpsLabel.setText("FPS: " + fps))
+    );
     
-    @Test
-    public void testGameLoopCreation() {
-        assertNotNull(gameLoop, "GameLoop이 생성되지 않았습니다");
-        assertFalse(gameLoop.isRunning(), "초기 상태에서 게임 루프가 실행 중이면 안됩니다");
-    }
-    
-    @Test
-    public void testStartStop() {
-        gameLoop.start();
-        assertTrue(gameLoop.isRunning(), "start() 호출 후 게임 루프가 실행되지 않습니다");
-        
-        gameLoop.stop();
-        assertFalse(gameLoop.isRunning(), "stop() 호출 후 게임 루프가 정지되지 않습니다");
-    }
-    
-    @Test
-    public void testPauseResume() {
-        gameLoop.start();
-        assertTrue(gameLoop.isRunning(), "게임 루프가 시작되지 않았습니다");
-        
-        gameLoop.pause();
-        assertTrue(gameLoop.isPaused(), "pause() 호출 후 일시정지 상태가 아닙니다");
-        
-        gameLoop.resume();
-        assertFalse(gameLoop.isPaused(), "resume() 호출 후 일시정지가 해제되지 않았습니다");
-        assertTrue(gameLoop.isRunning(), "resume() 후에도 게임 루프가 실행되지 않습니다");
-    }
-    
-    @Test
-    public void testFPSMeasurement() {
-        gameLoop.start();
-        
-        // 시뮬레이션을 위해 짧은 시간 대기
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-        
-        double fps = gameLoop.getCurrentFPS();
-        assertTrue(fps >= 0, "FPS는 0 이상이어야 합니다");
-    }
+    gameLoop.start(); // 실제 실행하여 동작 확인
 }
 ```
 
@@ -752,6 +787,7 @@ public class MovableWorldTest {
     
     @Test
     public void testRender() {
+        // GraphicsContext는 final 클래스이므로 mockito-inline 의존성이 필요합니다
         GraphicsContext gc = Mockito.mock(GraphicsContext.class);
         MovableBall ball = new MovableBall(100, 100, 20, Color.GREEN);
         world.addBall(ball);
@@ -787,12 +823,17 @@ public class MovableWorldTest {
        </dependency>
        <dependency>
            <groupId>org.mockito</groupId>
-           <artifactId>mockito-core</artifactId>
+           <artifactId>mockito-inline</artifactId>
            <version>4.6.1</version>
            <scope>test</scope>
        </dependency>
    </dependencies>
    ```
+   
+   **중요: Mockito 의존성 관련 참고사항**
+   - GraphicsContext는 final 클래스이므로 일반적인 mockito-core로는 mock 생성이 불가능합니다
+   - **mockito-inline**을 사용해야 final 클래스를 mock할 수 있습니다
+   - mockito-inline은 mockito-core의 모든 기능을 포함하므로 mockito-core 대신 사용하면 됩니다
 
 2. **테스트 실행**:
    ```bash

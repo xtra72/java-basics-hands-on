@@ -24,6 +24,9 @@
 
 **Box 클래스 설계:**
 - 필드: `x`, `y`, `width`, `height`
+  - `x`, `y`: 사각형의 왼쪽 상단 모서리 좌표
+  - `width`: 사각형의 너비 (오른쪽 방향)
+  - `height`: 사각형의 높이 (아래쪽 방향)
 - 메서드: Ball과 유사한 기능들
 - 문제: Ball과 코드 중복 발생!
 
@@ -217,8 +220,28 @@ MovableBall과 MovableBox에 동일한 move() 메서드:
 **Box 클래스 요구사항:**
 
 **필드 (private):**
-- `x`, `y`: 왼쪽 상단 좌표
+- `x`, `y`: 왼쪽 상단 모서리의 좌표
 - `width`, `height`: 크기
+  
+**좌표 시스템 설명:**
+- JavaFX 좌표계: 왼쪽 상단이 원점 (0, 0)
+- x축: 오른쪽이 양의 방향
+- y축: 아래쪽이 양의 방향
+- Box의 영역: 
+  - 왼쪽 상단: (x, y)
+  - 오른쪽 상단: (x + width, y)
+  - 왼쪽 하단: (x, y + height)
+  - 오른쪽 하단: (x + width, y + height)
+
+**시각적 표현:**
+```
+(0,0) → x축
+↓      (x, y)────────────(x+width, y)
+y축     │                    │
+        │     Box 내부       │
+        │                    │
+        (x, y+height)────(x+width, y+height)
+```
 
 **메서드:**
 - 생성자: 위치와 크기를 받아 초기화
@@ -235,8 +258,16 @@ MovableBall과 MovableBox에 동일한 move() 메서드:
 **구현 힌트:**
 ```java
 // contains 메서드 로직
-// px가 x와 x+width 사이에 있고
-// py가 y와 y+height 사이에 있으면 true
+// px >= x && px <= x + width &&
+// py >= y && py <= y + height
+// 경계선 위의 점도 포함됨 (등호 포함)
+
+// 예시: Box(100, 100, 50, 30)
+// - 점 (100, 100): true (왼쪽 상단 모서리)
+// - 점 (150, 130): true (오른쪽 하단 모서리)
+// - 점 (125, 115): true (내부)
+// - 점 (99, 100): false (왼쪽 경계 밖)
+// - 점 (151, 130): false (오른쪽 경계 밖)
 ```
 
 **경험할 문제점:**
@@ -548,13 +579,17 @@ public class BoxTest {
         // Box 내부의 점들
         assertTrue(box.contains(100, 100), "왼쪽 상단 모서리가 포함되지 않았습니다");
         assertTrue(box.contains(140, 130), "Box 내부 점이 포함되지 않았습니다");
-        assertTrue(box.contains(179, 159), "오른쪽 하단 경계 근처 점이 포함되지 않았습니다");
+        assertTrue(box.contains(180, 160), "오른쪽 하단 모서리가 포함되지 않았습니다");
+        assertTrue(box.contains(180, 130), "오른쪽 경계선 위의 점이 포함되지 않았습니다");
+        assertTrue(box.contains(140, 160), "아래쪽 경계선 위의 점이 포함되지 않았습니다");
         
         // Box 외부의 점들
-        assertFalse(box.contains(50, 50), "Box 외부 점이 포함되었습니다");
-        assertFalse(box.contains(200, 200), "Box 외부 점이 포함되었습니다");
-        assertFalse(box.contains(180, 130), "오른쪽 경계 밖 점이 포함되었습니다");
-        assertFalse(box.contains(140, 160), "아래쪽 경계 밖 점이 포함되었습니다");
+        assertFalse(box.contains(99, 100), "왼쪽 경계 밖 점이 포함되었습니다");
+        assertFalse(box.contains(100, 99), "위쪽 경계 밖 점이 포함되었습니다");
+        assertFalse(box.contains(181, 130), "오른쪽 경계 밖 점이 포함되었습니다");
+        assertFalse(box.contains(140, 161), "아래쪽 경계 밖 점이 포함되었습니다");
+        assertFalse(box.contains(50, 50), "Box 완전 외부 점이 포함되었습니다");
+        assertFalse(box.contains(200, 200), "Box 완전 외부 점이 포함되었습니다");
     }
     
     @Test

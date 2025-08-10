@@ -40,7 +40,7 @@ public class Ball {
     private double x;        // x 좌표
     private double y;        // y 좌표
     private double radius;   // 반지름
-    
+
     // 생성자 예시
     public Ball(double x, double y, double radius) {
         // this는 현재 객체를 가리킴
@@ -48,12 +48,12 @@ public class Ball {
         this.y = y;
         this.radius = radius;
     }
-    
+
     // Getter 메서드 패턴
-    public double getX() { 
-        return x; 
+    public double getX() {
+        return x;
     }
-    
+
     // TODO: 나머지 getter 메서드 구현
 }
 ```
@@ -78,23 +78,41 @@ System.out.println("X 좌표: " + xPosition);
 **JavaFX 애플리케이션의 기본 구조**
 ```java
 import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 public class GameApp extends Application {
-    
+
     @Override
-    public void start(Stage primaryStage) {
-        // TODO: 여기에 JavaFX UI 구성 코드 작성
-        // 1. Canvas 생성 (800 x 600)
-        // 2. GraphicsContext 가져오기
-        // 3. Scene 만들기
-        // 4. Stage 설정하기
-    }
-    
-    public static void main(String[] args) {
-        launch(args);
+    public void start(Stage stage) throws Exception {
+        // Canvas 설정
+        Canvas canvas = new Canvas(800, 600); // 1. 도화지를 생성한다.
+        GraphicsContext gc = canvas.getGraphicsContext2D(); // 2. 그림 도구를 생성한다.
+
+        // 그림 그리기
+        gc.setFill(Color.RED); // 1. 색을 정한다.
+        gc.fillOval(350, 250, 100, 100); // 2. Oval(타원)을 그린다.
+
+        // 레이아웃 설정
+        StackPane root = new StackPane();
+
+        // 레이아웃(StackPane)에 도화지(Canvas) 추가
+        root.getChildren().add(canvas);
+
+        // 화면(Scene) 생성 - 화면에 레이아웃과 도화지를 포함시킨다.
+        Scene scene = new Scene(root, 800, 600);
+
+        // javafx 프로그램이 실행될 윈도우 창(Stage) 설정
+        stage.setTitle("My First JavaFX Game"); // 윈도우 창 제목
+        stage.setScene(scene); // 윈도우 창의 화면을 설정
+        stage.show(); // 윈도우 창 표시하기
     }
 }
+
 ```
 
 **JavaFX 핵심 객체:**
@@ -135,7 +153,8 @@ cannongame/
 2. **World.java**: 여러 개의 공을 관리하는 컨테이너
    - 공을 추가, 삭제하는 기능
    - 화면에 모든 공을 그리는 기능
-   - JavaFX의 Pane을 상속받아 구현
+   - Canvas를 포함하여 그리기 영역 관리
+   - 게임 세계의 논리적 경계와 규칙 정의
 
 3. **GameApp.java**: 프로그램의 시작점
    - JavaFX Application을 상속
@@ -155,22 +174,22 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class BallTest {
     private Ball ball;
-    
+
     @BeforeEach
     public void setUp() {
         ball = new Ball(100, 100, 20);
     }
-    
+
     @Test
     public void testConstructor() {
         assertEquals(100, ball.getX());
         assertEquals(100, ball.getY());
         assertEquals(20, ball.getRadius());
     }
-    
+
     @Test
     public void testInvalidRadius() {
-        assertThrows(IllegalArgumentException.class, 
+        assertThrows(IllegalArgumentException.class,
             () -> new Ball(0, 0, -5));
     }
 }
@@ -178,14 +197,12 @@ public class BallTest {
 
 **JUnit 학습 자료:**
 - [JUnit 5 공식 문서](https://junit.org/junit5/docs/current/user-guide/)
-- [JUnit 어노테이션 정리](https://www.baeldung.com/junit-5-annotations)
-- [@BeforeEach와 @AfterEach 사용법](https://howtodoinjava.com/junit5/before-each-after-each/)
 - [Assertions 메서드 가이드](https://junit.org/junit5/docs/current/api/org.junit.jupiter.api/org/junit/jupiter/api/Assertions.html)
 
 ## 실습 과제
 
 ### Lab 1-1: 개발 환경 설정
-1. JDK 11 이상 설치
+1. JDK 17 이상 설치
 2. IDE 설정 (IntelliJ IDEA 권장)
 3. JavaFX SDK 다운로드 및 설정
 4. Maven 프로젝트 생성
@@ -196,8 +213,8 @@ public class BallTest {
 - [ ] 첫 JavaFX 프로그램 실행
 
 **참고 자료:**
-- [JDK 11 설치 가이드 (Oracle)](https://docs.oracle.com/en/java/javase/11/install/overview-jdk-installation.html)
-- [OpenJDK 11 설치 (대안)](https://adoptopenjdk.net/)
+- [JDK 17 설치 가이드 (Oracle)](https://docs.oracle.com/en/java/javase/17/install/overview-jdk-installation.html)
+- [OpenJDK 17 설치 (대안)](https://adoptopenjdk.net/)
 - [IntelliJ IDEA 설치 및 설정](https://www.jetbrains.com/idea/download/)
 - [JavaFX 시작하기 가이드](https://openjfx.io/openjfx-docs/)
 - [Maven 프로젝트 생성 튜토리얼](https://maven.apache.org/guides/getting-started/maven-in-five-minutes.html)
@@ -211,7 +228,7 @@ public class BallTest {
 ```java
 public class Point {
     // TODO: 구현하기
-    
+
     public double distanceTo(Point other) {
         // TODO: 피타고라스 정리를 사용하여 거리 계산
     }
@@ -247,6 +264,180 @@ Lab 1-2에서 작성한 `Point` 클래스에 대한 테스트를 작성하세요
 - [JavaFX Application 구조](https://openjfx.io/javadoc/17/javafx.graphics/javafx/application/Application.html)
 - [GraphicsContext로 도형 그리기](https://www.tutorialspoint.com/javafx/javafx_2d_shapes.htm)
 - [JavaFX 프로젝트 설정 문제 해결](https://stackoverflow.com/questions/tagged/javafx)
+
+#### IntelliJ IDEA에서 JavaFX 프로젝트 생성하기
+
+**단계별 가이드:**
+
+1. **새 프로젝트 생성**
+   - File → New → Project 선택
+   - 왼쪽 패널에서 "Java" 선택
+   - Project SDK: JDK 17 이상 선택
+   - "Next" 클릭
+
+2. **JavaFX 라이브러리 추가**
+   - File → Project Structure (Ctrl+Alt+Shift+S)
+   - Libraries → "+" 버튼 → "Java" 선택
+   - JavaFX SDK의 lib 폴더 선택 (예: `C:\javafx-sdk-17\lib`)
+   - 모든 jar 파일 선택 후 "OK"
+
+3. **Run Configuration 설정**
+   - Run → Edit Configurations
+   - "+" 버튼 → Application 선택
+   - Main class: `com.nhnacademy.cannongame.GameApp` 입력
+   - VM options에 다음 추가:
+     ```
+     --module-path "C:\javafx-sdk-17\lib" --add-modules javafx.controls,javafx.fxml
+     ```
+   - "OK" 클릭
+
+4. **모듈 설정 (module-info.java)**
+   ```java
+   module cannongame {
+       requires javafx.controls;
+       requires javafx.graphics;
+
+       exports com.nhnacademy.cannongame;
+   }
+   ```
+
+5. **실행 및 확인**
+   - 메인 클래스에서 우클릭 → "Run 'GameApp.main()'"
+   - 또는 상단 툴바의 초록색 실행 버튼 클릭
+
+#### Visual Studio Code에서 JavaFX 프로젝트 생성하기
+
+**필수 확장 프로그램 설치:**
+1. Extension Pack for Java 설치
+2. Command Palette (Ctrl+Shift+P)에서 `Extensions: Install Extensions` 검색 후 설치
+
+**방법 1: 명령 팔레트를 사용한 JavaFX 프로젝트 생성 (권장)**
+
+1. **명령 팔레트 열기**
+   - Ctrl+Shift+P (Windows/Linux) 또는 Cmd+Shift+P (macOS)
+
+2. **Java 프로젝트 생성**
+   - `Java: Create Java Project` 입력 및 선택
+   - 프로젝트 타입에서 `JavaFX` 선택
+   - JavaFX 버전 선택 (예: 17 이상)
+   - 프로젝트 위치 선택
+
+3. **Maven 프로젝트 초기화 정보 입력**
+   프로젝트 생성 시 다음 정보를 순서대로 입력합니다:
+
+   - **Group Id**: `com.nhnacademy` (조직/회사 도메인 역순)
+   - **Artifact Id**: `cannongame` (프로젝트 이름)
+   - **Version**: `1.0-SNAPSHOT` (기본값 사용 또는 원하는 버전)
+   - **Package name**: `com.nhnacademy.cannongame` (자동 생성되거나 직접 입력)
+   - **JavaFX version**: `17` 또는 `21` (JDK 버전과 호환되는 버전 선택)
+
+4. **자동 생성되는 Maven 프로젝트 구조**
+   ```
+   cannongame/
+   ├── .vscode/
+   │   ├── launch.json      (자동 생성된 실행 설정)
+   │   └── settings.json    (자동 생성된 프로젝트 설정)
+   ├── src/
+   │   ├── main/
+   │   │   ├── java/
+   │   │   │   ├── com/nhnacademy/cannongame/
+   │   │   │   │   ├── App.java           (메인 클래스)
+   │   │   │   │   ├── PrimaryController.java
+   │   │   │   │   └── SecondaryController.java
+   │   │   │   └── module-info.java
+   │   │   └── resources/
+   │   │       └── com/nhnacademy/cannongame/
+   │   │           ├── primary.fxml
+   │   │           └── secondary.fxml
+   │   └── test/
+   │       └── java/
+   └── pom.xml              (Maven 설정 파일)
+   ```
+
+5. **pom.xml 확인 및 수정**
+   자동 생성된 pom.xml에는 JavaFX 의존성이 포함되어 있습니다:
+   ```xml
+   <dependencies>
+       <dependency>
+           <groupId>org.openjfx</groupId>
+           <artifactId>javafx-controls</artifactId>
+           <version>17.0.1</version>
+       </dependency>
+       <dependency>
+           <groupId>org.openjfx</groupId>
+           <artifactId>javafx-fxml</artifactId>
+           <version>17.0.1</version>
+       </dependency>
+   </dependencies>
+   ```
+
+6. **프로젝트 커스터마이징**
+   - App.java를 GameApp.java로 이름 변경
+   - 불필요한 FXML 파일과 Controller 클래스 삭제 (Canvas 기반 게임에서는 불필요)
+   - module-info.java 확인:
+   ```java
+   module cannongame {
+       requires javafx.controls;
+       requires javafx.graphics;
+
+       exports com.nhnacademy.cannongame;
+   }
+   ```
+
+7. **실행**
+   - F5 키를 눌러 디버그 실행
+   - 또는 터미널에서 Maven 명령어 사용:
+     ```bash
+     mvn clean javafx:run
+     ```
+   - VSCode 하단의 Maven 패널에서 `javafx:run` 목표 실행도 가능
+
+**Maven 프로젝트의 장점:**
+- JavaFX 의존성 자동 관리
+- 빌드 및 실행 과정 표준화
+- 플랫폼 독립적인 실행 환경
+- IDE와 무관하게 일관된 프로젝트 구조
+
+**방법 2: 수동 설정 (문제 발생 시)**
+
+1. **JavaFX SDK 다운로드**
+   - [JavaFX 다운로드 페이지](https://openjfx.io/)에서 SDK 다운로드
+   - lib 폴더에 압축 해제
+
+2. **launch.json 수정**
+   `.vscode/launch.json`에서 JavaFX 경로 확인:
+   ```json
+   {
+     "configurations": [
+       {
+         "type": "java",
+         "name": "Launch App",
+         "request": "launch",
+         "mainClass": "com.nhnacademy.cannongame.GameApp",
+         "vmArgs": "--module-path \"./lib\" --add-modules javafx.controls,javafx.fxml"
+       }
+     ]
+   }
+   ```
+
+**자주 발생하는 문제와 해결책:**
+
+1. **"JavaFX runtime components are missing" 오류**
+   - 원인: JavaFX 라이브러리 경로가 잘못됨
+   - 해결: launch.json의 module-path가 lib 폴더를 정확히 가리키는지 확인
+
+2. **"Error: Could not find or load main class" 오류**
+   - 원인: 패키지 구조와 클래스 경로 불일치
+   - 해결: mainClass 경로가 실제 패키지 구조와 일치하는지 확인
+
+3. **모듈 관련 오류**
+   - 원인: module-info.java 설정 문제
+   - 해결: exports 구문에 올바른 패키지명 사용
+
+**공통 문제 해결:**
+- **"JavaFX runtime components are missing" 오류**: VM arguments가 올바르게 설정되었는지 확인
+- **"Module not found" 오류**: module-path가 JavaFX lib 폴더를 정확히 가리키는지 확인
+- **클래스를 찾을 수 없음**: 패키지 구조와 클래스 이름이 일치하는지 확인
 
 ## 자가 평가 문제
 
