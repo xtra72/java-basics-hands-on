@@ -227,13 +227,30 @@ public class BallTest {
 
 ```java
 public class Point {
-    // TODO: 구현하기
-
+    private final double x;
+    private final double y;
+    
+    public Point(double x, double y) {
+        this.x = x;
+        this.y = y;
+    }
+    
+    public double getX() {
+        return x;
+    }
+    
+    public double getY() {
+        return y;
+    }
+    
     public double distanceTo(Point other) {
         // TODO: 피타고라스 정리를 사용하여 거리 계산
+        // sqrt((x2-x1)² + (y2-y1)²)
     }
 }
 ```
+
+**참고:** Point는 불변(immutable) 클래스로 설계되어, 한 번 생성된 후에는 값이 변경되지 않습니다. 이는 객체의 상태가 변경되지 않음을 보장하여 더 안전한 코드를 작성할 수 있게 합니다.
 
 **참고 자료:**
 - [Java 클래스와 객체 기초](https://docs.oracle.com/javase/tutorial/java/javaOO/classes.html)
@@ -374,13 +391,42 @@ Lab 1-2에서 작성한 `Point` 클래스에 대한 테스트를 작성하세요
 6. **프로젝트 커스터마이징**
    - App.java를 GameApp.java로 이름 변경
    - 불필요한 FXML 파일과 Controller 클래스 삭제 (Canvas 기반 게임에서는 불필요)
-   - module-info.java 확인:
+   - module-info.java 확인 및 수정:
    ```java
    module cannongame {
        requires javafx.controls;
        requires javafx.graphics;
 
        exports com.nhnacademy.cannongame;
+   }
+   ```
+   
+   **경고 메시지 해결:**
+   `"The type Stage from module javafx.graphics may not be accessible to clients due to missing 'requires transitive'"` 경고가 나타날 경우:
+   
+   이 경고는 다른 모듈에서 이 모듈을 사용할 때 JavaFX 타입에 접근할 수 없을 수 있다는 의미입니다. 해결 방법:
+   
+   **방법 1 (권장)**: 경고 무시
+   - 이 프로젝트는 독립 실행형 애플리케이션이므로 다른 모듈에서 사용하지 않음
+   - 경고가 실행에 영향을 주지 않으므로 무시해도 됨
+   
+   **방법 2**: transitive 추가 (필요시)
+   ```java
+   module cannongame {
+       requires transitive javafx.controls;
+       requires transitive javafx.graphics;
+
+       exports com.nhnacademy.cannongame;
+   }
+   ```
+   
+   **방법 3**: 특정 패키지만 export (보안 강화)
+   ```java
+   module cannongame {
+       requires javafx.controls;
+       requires javafx.graphics;
+
+       exports com.nhnacademy.cannongame to javafx.graphics;
    }
    ```
 

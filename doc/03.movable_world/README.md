@@ -27,25 +27,45 @@
 PaintableBall을 상속받아 움직임 기능을 추가합니다:
 
 **추가 필드:**
-- `dx`: x 방향 속도 (pixels/second)
-- `dy`: y 방향 속도 (pixels/second)
+- `velocity`: 속도 벡터 (Vector2D)
 
 **생성자:**
-- 3개 매개변수: 속도는 0으로 초기화
-- 6개 매개변수: 모든 속성 지정
+- 3개 매개변수: center, radius, color (속도는 영벡터로 초기화)
+- 5개 매개변수: center, radius, color, velocity (모든 속성 지정)
 
 **추가 메서드:**
-- Getter/Setter: `getDx()`, `getDy()`, `setDx()`, `setDy()`
-- `getSpeed()`: 속도의 크기 계산 (√(dx² + dy²))
-- `getDirection()`: 속도의 방향 계산 (라디안)
-- `move()`: 프레임 단위 이동
+- `getVelocity()`: 속도 벡터 반환
+- `setVelocity(Vector2D velocity)`: 속도 벡터 설정
+- `move()`: 프레임 단위 이동 (기본적으로 1/60초 가정)
 - `move(double deltaTime)`: 시간 기반 이동
 
 **구현 힌트:**
 ```java
-// 속도 크기 = √(dx² + dy²)
-// 방향(라디안) = Math.atan2(dy, dx)
-// 시간 기반 이동: 새 위치 = 현재 위치 + 속도 × 시간
+public class MovableBall extends PaintableBall {
+    private Vector2D velocity;
+
+    public MovableBall(Point center, double radius, Color color) {
+        super(center, radius, color);
+        this.velocity = new Vector2D(0, 0);
+    }
+
+    public MovableBall(Point center, double radius, Color color, Vector2D velocity) {
+        super(center, radius, color);
+        this.velocity = velocity;
+    }
+
+    // 시간 기반 이동
+    public void move(double deltaTime) {
+        Point currentCenter = getCenter();
+        Vector2D displacement = new Vector(velocity.getX() * deltaTime, velocity.getY() * deltaTime);
+        Point newCenter = currentCenter.add(displacement);
+        moveTo(newCenter);
+    }
+
+    public void move() {
+        move(1.0 / 60.0); // 기본 60 FPS 가정
+    }
+}
 ```
 
 ### 3.2 시간 기반 애니메이션
@@ -59,10 +79,12 @@ PaintableBall을 상속받아 움직임 기능을 추가합니다:
 
 ```java
 // 프레임 의존적 (잘못된 방법)
-ball.x += 5; // 빠른 컴퓨터에서는 더 빨리 움직임
+Point oldCenter = ball.getCenter();
+ball.moveTo(new Point(oldCenter.getX() + 5, oldCenter.getY())); // 빠른 컴퓨터에서는 더 빨리 움직임
 
 // 시간 기반 (올바른 방법)
-ball.x += speed * deltaTime; // 모든 컴퓨터에서 같은 속도
+Vector2D displacement = new Vector2D(velocity.getX() * deltaTime, velocity.getY() * deltaTime);
+Point newCenter = oldCenter.add(displacement); // 모든 컴퓨터에서 같은 속도
 ```
 
 **AnimationTimer란?**
@@ -121,7 +143,7 @@ double deltaTime = (now - lastUpdate) / 1_000_000_000.0;
     / | 4
    /  |
   /   |
- →-----+ 
+ →-----+
     3
 
 크기 = √(3² + 4²) = 5
@@ -142,7 +164,7 @@ double deltaTime = (now - lastUpdate) / 1_000_000_000.0;
 
 **메서드:**
 - `add(Vector2D other)`: 벡터 덧셈
-- `subtract(Vector2D other)`: 벡터 뻔셈
+- `subtract(Vector2D other)`: 벡터 뺄셈
 - `multiply(double scalar)`: 스칼라 곱셈
 - `magnitude()`: 벡터의 크기 (√(x² + y²))
 - `normalize()`: 정규화 (크기를 1로 만들기)
@@ -155,6 +177,35 @@ double deltaTime = (now - lastUpdate) / 1_000_000_000.0;
 // normalize에서 magnitude가 0일 때 처리 필요
 // 내적 = x₁×x₂ + y₁×y₂
 ```
+
+**Point와 Vector2D의 관계**
+
+Point는 위치를 나타내고, Vector2D는 변위(이동량)를 나타냅니다:
+- **Point + Vector2D = Point**: 위치에서 이동하여 새로운 위치
+- **Point - Point = Vector2D**: 두 위치 간의 변위
+- **Vector2D + Vector2D = Vector2D**: 변위의 합성
+
+이 관계를 활용하기 위해 Point 클래스를 확장해야 합니다:
+
+```java
+public class Point {
+    private final double x;
+    private final double y;
+
+    // 기존 생성자와 메서드...
+
+    // Vector2D와의 연산을 위해 추가할 메서드
+    public Point add(Vector2D vector) {
+        return new Point(x + vector.getX(), y + vector.getY());
+    }
+
+    public Vector2D subtract(Point other) {
+        return new Vector2D(x - other.x, y - other.y);
+    }
+}
+```
+
+**중요:** 이 메서드들을 Point 클래스에 추가하면, 위치와 속도를 더 자연스럽게 다룰 수 있습니다.
 
 ### 3.4 MovableWorld 클래스 설계
 
@@ -173,6 +224,15 @@ MovableWorld (움직이는 공들을 관리하는 세계)
 1. **움직이는 공들의 위치 업데이트**: 모든 MovableBall의 이동을 관리
 2. **프레임 단위 시뮬레이션**: 매 프레임마다 물리 업데이트 수행
 3. **렌더링 최적화**: 움직이는 객체들의 효율적인 그리기
+
+**World로부터 상속받은 메서드들:**
+- `add(Ball ball)`: 공을 월드에 추가 (2장에서 정의)
+- `remove(Ball ball)`: 특정 공 제거
+- `clear()`: 모든 공 제거
+- `getBalls()`: 공 목록 반환 (방어적 복사)
+- `getBallCount()`: 현재 공의 개수 반환
+- `getWidth()`, `getHeight()`: 월드 크기 반환
+- `draw(GraphicsContext gc)`: 모든 공을 화면에 그리기
 
 **클래스 설계:**
 
@@ -195,8 +255,7 @@ public void update(double deltaTime) {
 ```java
 // instanceof를 사용하여 MovableBall 타입 확인
 for (Ball ball : balls) {
-    if (ball instanceof MovableBall) {
-        MovableBall movableBall = (MovableBall) ball;
+    if (ball instanceof MovableBall movableBall) {
         movableBall.move(deltaTime);
     }
 }
@@ -207,11 +266,11 @@ for (Ball ball : balls) {
 // MovableWorld 생성
 MovableWorld world = new MovableWorld(800, 600);
 
-// 움직이는 공 추가
-MovableBall ball = new MovableBall(100, 100, 20);
-ball.setDx(50); // x 방향 속도
-ball.setDy(30); // y 방향 속도
-world.addBall(ball);
+// 움직이는 공 추가 (상속받은 add 메서드 사용)
+Point initialCenter = new Point(100, 100);
+MovableBall ball = new MovableBall(initialCenter, 20, Color.RED);
+ball.setVelocity(new Vector2D(50, 30)); // 속도 벡터 설정
+world.add(ball); // World 클래스의 add() 메서드 사용
 
 // 게임 루프에서 업데이트
 world.update(0.016); // 약 60FPS (1/60초)
@@ -238,24 +297,59 @@ world.update(0.016); // 약 60FPS (1/60초)
 
 Vector2D를 사용하여 더 나은 물리 시뮬레이션을 구현합니다:
 
-**필드:**
-- `velocity`: 속도 벡터
-- `acceleration`: 가속도 벡터
+```java
+public class MovableBallV2 extends PaintableBall {
+    private Vector2D velocity;
+    private Vector2D acceleration;
 
-**메서드:**
-- `applyForce(Vector2D force)`: 힘 적용
-  - F = ma 원리 사용
-  - 질량은 반지름에 비례한다고 가정
-- `update(double deltaTime)`: 물리 업데이트
-  - 속도 업데이트: v = v + a × Δt
-  - 위치 업데이트: p = p + v × Δt
-  - 가속도 초기화 (중요!)
-- `limitSpeed(double maxSpeed)`: 최대 속도 제한
+    public MovableBallV2(Point center, double radius, Color color) {
+        super(center, radius, color);
+        this.velocity = new Vector2D(0, 0);
+        this.acceleration = new Vector2D(0, 0);
+    }
+
+    // 힘 적용 (F = ma, a = F/m)
+    public void applyForce(Vector2D force) {
+        // 질량을 반지름에 비례한다고 가정 (간단화)
+        double mass = getRadius();
+        Vector2D acc = force.multiply(1.0 / mass);
+        acceleration = acceleration.add(acc);
+    }
+
+    // 물리 업데이트
+    public void update(double deltaTime) {
+        // 1. 속도 업데이트: v = v + a × Δt
+        velocity = velocity.add(acceleration.multiply(deltaTime));
+
+        // 2. 위치 업데이트: p = p + v × Δt
+        Point currentCenter = getCenter();
+        Vector2D displacement = velocity.multiply(deltaTime);
+        Point newCenter = currentCenter.add(displacement);
+        moveTo(newCenter);
+
+        // 3. 가속도 초기화 (중요!)
+        acceleration = new Vector2D(0, 0);
+    }
+
+    // 속도 제한
+    public void limitSpeed(double maxSpeed) {
+        double currentSpeed = velocity.magnitude();
+        if (currentSpeed > maxSpeed) {
+            velocity = velocity.normalize().multiply(maxSpeed);
+        }
+    }
+}
+```
 
 **구현 힌트:**
 ```java
-// 힘에서 가속도 계산: a = F / m
-// 속도 제한: 현재 속도가 최대치를 초과하면 정규화 후 스케일링
+// 중력 적용 예시
+Vector2D gravity = new Vector2D(0, 9.8 * 10); // 10픽셀 = 1미터로 스케일링
+ball.applyForce(gravity);
+
+// 바람 적용 예시
+Vector2D wind = new Vector2D(5, 0);
+ball.applyForce(wind);
 ```
 
 ## 실습 과제
@@ -274,31 +368,32 @@ if (ball instanceof MovableBall) {
 ### Lab 3-1: 기본 MovableBall 구현
 `MovableBall` 클래스를 구현하고 테스트하세요:
 - PaintableBall을 상속
-- 속도 필드 추가 (dx, dy)
+- 속도 벡터 필드 추가 (Vector2D)
 - move() 메서드 구현
-- 속도와 방향 계산 메서드
+- Point와 Vector2D를 활용한 위치 업데이트
 
 **테스트 코드:**
 ```java
 @Test
 public void testMovableBallMovement() {
-    MovableBall ball = new MovableBall(100, 100, 20);
-    ball.setDx(50);
-    ball.setDy(30);
-    
+    Point initialCenter = new Point(100, 100);
+    MovableBall ball = new MovableBall(initialCenter, 20, Color.RED);
+    ball.setVelocity(new Vector2D(50, 30));
+
     ball.move(1.0); // 1초 동안 이동
-    
-    assertEquals(150, ball.getX(), 0.001);
-    assertEquals(130, ball.getY(), 0.001);
+
+    Point newCenter = ball.getCenter();
+    assertEquals(150, newCenter.getX(), 0.001);
+    assertEquals(130, newCenter.getY(), 0.001);
 }
 
 @Test
-public void testSpeed() {
-    MovableBall ball = new MovableBall(0, 0, 10);
-    ball.setDx(3);
-    ball.setDy(4);
-    
-    assertEquals(5.0, ball.getSpeed(), 0.001); // 3-4-5 삼각형
+public void testVelocityMagnitude() {
+    MovableBall ball = new MovableBall(new Point(0, 0), 10, Color.BLUE);
+    Vector2D velocity = new Vector2D(3, 4);
+    ball.setVelocity(velocity);
+
+    assertEquals(5.0, ball.getVelocity().magnitude(), 0.001); // 3-4-5 삼각형
 }
 ```
 
@@ -358,48 +453,47 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class MovableBallTest {
     private MovableBall ball;
-    
+
     @BeforeEach
     public void setUp() {
-        ball = new MovableBall(100, 100, 20);
-        ball.setDx(60); // 60 pixels/second
-        ball.setDy(80); // 80 pixels/second
+        ball = new MovableBall(new Point(100, 100), 20, Color.RED);
+        ball.setVelocity(new Vector2D(60, 80)); // 60, 80 pixels/second
     }
-    
+
     @Test
     public void testInitialVelocity() {
-        MovableBall newBall = new MovableBall(0, 0, 10);
-        assertEquals(0, newBall.getDx());
-        assertEquals(0, newBall.getDy());
+        MovableBall newBall = new MovableBall(new Point(0, 0), 10, Color.RED);
+        assertEquals(0, newBall.getVelocity().getX());
+        assertEquals(0, newBall.getVelocity().getY());
     }
-    
+
     @Test
     public void testMove() {
-        double originalX = ball.getX();
-        double originalY = ball.getY();
-        
+        Point originalCenter = ball.getCenter();
+
         ball.move(0.5); // 0.5초 이동
-        
-        assertEquals(originalX + 30, ball.getX(), 0.001);
-        assertEquals(originalY + 40, ball.getY(), 0.001);
+
+        Point newCenter = ball.getCenter();
+        assertEquals(originalCenter.getX() + 30, newCenter.getX(), 0.001);
+        assertEquals(originalCenter.getY() + 40, newCenter.getY(), 0.001);
     }
-    
+
     @Test
-    public void testSpeedCalculation() {
-        assertEquals(100, ball.getSpeed(), 0.001); // sqrt(60^2 + 80^2) = 100
+    public void testVelocityMagnitude() {
+        assertEquals(100, ball.getVelocity().magnitude(), 0.001); // sqrt(60^2 + 80^2) = 100
     }
-    
+
     @Test
-    public void testDirection() {
-        MovableBall rightBall = new MovableBall(0, 0, 10);
-        rightBall.setDx(10);
-        rightBall.setDy(0);
-        assertEquals(0, rightBall.getDirection(), 0.001); // 오른쪽 = 0 라디안
-        
-        MovableBall upBall = new MovableBall(0, 0, 10);
-        upBall.setDx(0);
-        upBall.setDy(-10);
-        assertEquals(-Math.PI/2, upBall.getDirection(), 0.001); // 위쪽 = -π/2
+    public void testVelocityDirection() {
+        MovableBall rightBall = new MovableBall(new Point(0, 0), 10, Color.RED);
+        rightBall.setVelocity(new Vector2D(10, 0));
+        double rightDirection = Math.atan2(0, 10);
+        assertEquals(0, rightDirection, 0.001); // 오른쪽 = 0 라디안
+
+        MovableBall upBall = new MovableBall(new Point(0, 0), 10, Color.BLUE);
+        upBall.setVelocity(new Vector2D(0, -10));
+        double upDirection = Math.atan2(-10, 0);
+        assertEquals(-Math.PI/2, upDirection, 0.001); // 위쪽 = -π/2
     }
 }
 ```
@@ -465,95 +559,95 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class Vector2DTest {
-    
+
     @Test
     public void testVectorCreation() {
         Vector2D vector = new Vector2D(3.0, 4.0);
         assertEquals(3.0, vector.getX(), 0.001, "X 성분이 올바르게 설정되지 않았습니다");
         assertEquals(4.0, vector.getY(), 0.001, "Y 성분이 올바르게 설정되지 않았습니다");
     }
-    
+
     @Test
     public void testDefaultConstructor() {
         Vector2D vector = new Vector2D();
         assertEquals(0.0, vector.getX(), 0.001, "기본 X 성분은 0이어야 합니다");
         assertEquals(0.0, vector.getY(), 0.001, "기본 Y 성분은 0이어야 합니다");
     }
-    
+
     @Test
     public void testVectorAddition() {
         Vector2D v1 = new Vector2D(2.0, 3.0);
         Vector2D v2 = new Vector2D(1.0, 4.0);
-        
+
         Vector2D result = v1.add(v2);
-        
+
         assertEquals(3.0, result.getX(), 0.001, "벡터 덧셈 X 성분이 잘못되었습니다");
         assertEquals(7.0, result.getY(), 0.001, "벡터 덧셈 Y 성분이 잘못되었습니다");
-        
+
         // 원본 벡터는 변경되지 않아야 함
         assertEquals(2.0, v1.getX(), 0.001, "원본 벡터가 변경되었습니다");
         assertEquals(3.0, v1.getY(), 0.001, "원본 벡터가 변경되었습니다");
     }
-    
+
     @Test
     public void testVectorSubtraction() {
         Vector2D v1 = new Vector2D(5.0, 8.0);
         Vector2D v2 = new Vector2D(2.0, 3.0);
-        
+
         Vector2D result = v1.subtract(v2);
-        
+
         assertEquals(3.0, result.getX(), 0.001, "벡터 뺄셈 X 성분이 잘못되었습니다");
         assertEquals(5.0, result.getY(), 0.001, "벡터 뺄셈 Y 성분이 잘못되었습니다");
     }
-    
+
     @Test
     public void testVectorMultiplication() {
         Vector2D vector = new Vector2D(3.0, 4.0);
         Vector2D result = vector.multiply(2.0);
-        
+
         assertEquals(6.0, result.getX(), 0.001, "벡터 곱셈 X 성분이 잘못되었습니다");
         assertEquals(8.0, result.getY(), 0.001, "벡터 곱셈 Y 성분이 잘못되었습니다");
     }
-    
+
     @Test
     public void testVectorMagnitude() {
         Vector2D vector = new Vector2D(3.0, 4.0);
         double magnitude = vector.magnitude();
-        
+
         assertEquals(5.0, magnitude, 0.001, "벡터 크기 계산이 잘못되었습니다");
-        
+
         // 영벡터 테스트
         Vector2D zeroVector = new Vector2D(0.0, 0.0);
         assertEquals(0.0, zeroVector.magnitude(), 0.001, "영벡터의 크기는 0이어야 합니다");
     }
-    
+
     @Test
     public void testVectorNormalize() {
         Vector2D vector = new Vector2D(3.0, 4.0);
         Vector2D normalized = vector.normalize();
-        
+
         assertEquals(1.0, normalized.magnitude(), 0.001, "정규화된 벡터의 크기는 1이어야 합니다");
         assertEquals(0.6, normalized.getX(), 0.001, "정규화된 벡터 X 성분이 잘못되었습니다");
         assertEquals(0.8, normalized.getY(), 0.001, "정규화된 벡터 Y 성분이 잘못되었습니다");
     }
-    
+
     @Test
     public void testZeroVectorNormalize() {
         Vector2D zeroVector = new Vector2D(0.0, 0.0);
         Vector2D normalized = zeroVector.normalize();
-        
+
         // 영벡터의 정규화는 영벡터를 반환해야 함
         assertEquals(0.0, normalized.getX(), 0.001, "영벡터 정규화 X 성분이 잘못되었습니다");
         assertEquals(0.0, normalized.getY(), 0.001, "영벡터 정규화 Y 성분이 잘못되었습니다");
     }
-    
+
     @Test
     public void testDotProduct() {
         Vector2D v1 = new Vector2D(3.0, 4.0);
         Vector2D v2 = new Vector2D(2.0, 1.0);
-        
+
         double dotProduct = v1.dot(v2);
-        
+
         assertEquals(10.0, dotProduct, 0.001, "내적 계산이 잘못되었습니다");
     }
 }
@@ -568,113 +662,117 @@ import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class MovableBallTest {
-    
+
     private MovableBall ball;
-    
+
     @BeforeEach
     public void setUp() {
-        ball = new MovableBall(100, 100, 20, Color.RED);
+        ball = new MovableBall(new Point(100, 100), 20, Color.RED);
     }
-    
+
     @Test
     public void testMovableBallCreation() {
+        MovableBall newBall = new MovableBall(new Point(100, 100), 20, Color.RED);
+
         // 부모 클래스 속성 확인
-        assertEquals(100, ball.getX(), 0.001, "X 좌표가 올바르게 설정되지 않았습니다");
-        assertEquals(100, ball.getY(), 0.001, "Y 좌표가 올바르게 설정되지 않았습니다");
-        assertEquals(20, ball.getRadius(), 0.001, "반지름이 올바르게 설정되지 않았습니다");
-        assertEquals(Color.RED, ball.getColor(), "색상이 올바르게 설정되지 않았습니다");
-        
+        Point center = newBall.getCenter();
+        assertEquals(100, center.getX(), 0.001, "X 좌표가 올바르게 설정되지 않았습니다");
+        assertEquals(100, center.getY(), 0.001, "Y 좌표가 올바르게 설정되지 않았습니다");
+        assertEquals(20, newBall.getRadius(), 0.001, "반지름이 올바르게 설정되지 않았습니다");
+        assertEquals(Color.RED, newBall.getColor(), "색상이 올바르게 설정되지 않았습니다");
+
         // 초기 속도는 0이어야 함
-        assertEquals(0.0, ball.getDx(), 0.001, "초기 X 속도는 0이어야 합니다");
-        assertEquals(0.0, ball.getDy(), 0.001, "초기 Y 속도는 0이어야 합니다");
+        Vector2D velocity = newBall.getVelocity();
+        assertEquals(0.0, velocity.getX(), 0.001, "초기 X 속도는 0이어야 합니다");
+        assertEquals(0.0, velocity.getY(), 0.001, "초기 Y 속도는 0이어야 합니다");
     }
-    
+
     @Test
-    public void testVelocitySettersAndGetters() {
-        ball.setDx(50.0);
-        ball.setDy(30.0);
-        
-        assertEquals(50.0, ball.getDx(), 0.001, "X 속도 설정이 올바르지 않습니다");
-        assertEquals(30.0, ball.getDy(), 0.001, "Y 속도 설정이 올바르지 않습니다");
+    public void testVelocitySetterAndGetter() {
+        Vector2D newVelocity = new Vector2D(50.0, 30.0);
+        ball.setVelocity(newVelocity);
+
+        Vector2D velocity = ball.getVelocity();
+        assertEquals(50.0, velocity.getX(), 0.001, "X 속도 설정이 올바르지 않습니다");
+        assertEquals(30.0, velocity.getY(), 0.001, "Y 속도 설정이 올바르지 않습니다");
     }
-    
+
     @Test
-    public void testVectorVelocity() {
-        Vector2D velocity = new Vector2D(100.0, 75.0);
-        ball.setVelocity(velocity);
-        
-        assertEquals(100.0, ball.getDx(), 0.001, "벡터 속도 X 설정이 올바르지 않습니다");
-        assertEquals(75.0, ball.getDy(), 0.001, "벡터 속도 Y 설정이 올바르지 않습니다");
-        
+    public void testVelocityImmutability() {
+        Vector2D originalVelocity = new Vector2D(100.0, 75.0);
+        ball.setVelocity(originalVelocity);
+
+        // 원본 벡터를 변경해도 ball의 속도는 영향받지 않아야 함
+        // (Vector2D가 불변 객체이므로)
         Vector2D retrievedVelocity = ball.getVelocity();
-        assertEquals(100.0, retrievedVelocity.getX(), 0.001, "벡터 속도 X 조회가 올바르지 않습니다");
-        assertEquals(75.0, retrievedVelocity.getY(), 0.001, "벡터 속도 Y 조회가 올바르지 않습니다");
+        assertEquals(100.0, retrievedVelocity.getX(), 0.001, "벡터 속도 X가 올바르지 않습니다");
+        assertEquals(75.0, retrievedVelocity.getY(), 0.001, "벡터 속도 Y가 올바르지 않습니다");
     }
-    
+
     @Test
     public void testMove() {
-        ball.setDx(60.0); // 60 pixels/second
-        ball.setDy(80.0); // 80 pixels/second
-        
+        ball.setVelocity(new Vector2D(60.0, 80.0)); // 60, 80 pixels/second
+
         double deltaTime = 0.5; // 0.5초
         ball.move(deltaTime);
-        
+
         // 0.5초 동안 이동한 거리 계산
-        assertEquals(130.0, ball.getX(), 0.001, "X 방향 이동이 올바르지 않습니다"); // 100 + 60*0.5
-        assertEquals(140.0, ball.getY(), 0.001, "Y 방향 이동이 올바르지 않습니다"); // 100 + 80*0.5
+        Point newCenter = ball.getCenter();
+        assertEquals(130.0, newCenter.getX(), 0.001, "X 방향 이동이 올바르지 않습니다"); // 100 + 60*0.5
+        assertEquals(140.0, newCenter.getY(), 0.001, "Y 방향 이동이 올바르지 않습니다"); // 100 + 80*0.5
     }
-    
+
     @Test
     public void testMoveWithZeroVelocity() {
-        // 속도가 0일 때 위치 변화 없음
-        double originalX = ball.getX();
-        double originalY = ball.getY();
-        
-        ball.move(1.0); // 1초 경과
-        
-        assertEquals(originalX, ball.getX(), 0.001, "속도가 0일 때 X 위치가 변경되었습니다");
-        assertEquals(originalY, ball.getY(), 0.001, "속도가 0일 때 Y 위치가 변경되었습니다");
+        MovableBall zeroVelBall = new MovableBall(new Point(50, 50), 10, Color.GREEN);
+        // 기본 속도는 영벡터
+
+        Point originalCenter = zeroVelBall.getCenter();
+        zeroVelBall.move(1.0); // 1초 경과
+
+        Point newCenter = zeroVelBall.getCenter();
+        assertEquals(originalCenter.getX(), newCenter.getX(), 0.001, "속도가 0일 때 X 위치가 변경되었습니다");
+        assertEquals(originalCenter.getY(), newCenter.getY(), 0.001, "속도가 0일 때 Y 위치가 변경되었습니다");
     }
-    
+
     @Test
     public void testMoveWithNegativeVelocity() {
-        ball.setDx(-40.0);
-        ball.setDy(-30.0);
-        
+        ball.setVelocity(new Vector2D(-40.0, -30.0));
+
         ball.move(1.0);
-        
-        assertEquals(60.0, ball.getX(), 0.001, "음수 X 속도 이동이 올바르지 않습니다");
-        assertEquals(70.0, ball.getY(), 0.001, "음수 Y 속도 이동이 올바르지 않습니다");
+
+        Point newCenter = ball.getCenter();
+        assertEquals(60.0, newCenter.getX(), 0.001, "음수 X 속도 이동이 올바르지 않습니다");
+        assertEquals(70.0, newCenter.getY(), 0.001, "음수 Y 속도 이동이 올바르지 않습니다");
     }
-    
+
     @Test
     public void testInheritance() {
         // MovableBall이 PaintableBall을 상속받는지 확인
         assertTrue(ball instanceof PaintableBall, "MovableBall은 PaintableBall을 상속받아야 합니다");
         assertTrue(ball instanceof Ball, "MovableBall은 Ball을 상속받아야 합니다");
-        
+
         // 부모 클래스의 메서드 사용 가능한지 확인
         ball.setColor(Color.BLUE);
         assertEquals(Color.BLUE, ball.getColor(), "상속받은 색상 변경이 작동하지 않습니다");
-        
+
         assertTrue(ball.contains(100, 100), "상속받은 contains 메서드가 작동하지 않습니다");
     }
-    
+
     @Test
-    public void testSpeedCalculation() {
-        ball.setDx(30.0);
-        ball.setDy(40.0);
-        
-        double speed = ball.getSpeed();
-        assertEquals(50.0, speed, 0.001, "속력 계산이 올바르지 않습니다"); // √(30² + 40²) = 50
+    public void testVelocityMagnitudeCalculation() {
+        ball.setVelocity(new Vector2D(30.0, 40.0));
+
+        double magnitude = ball.getVelocity().magnitude();
+        assertEquals(50.0, magnitude, 0.001, "속력 계산이 올바르지 않습니다"); // √(30² + 40²) = 50
     }
-    
+
     @Test
-    public void testDirectionCalculation() {
-        ball.setDx(10.0);
-        ball.setDy(10.0);
-        
-        double direction = ball.getDirection();
+    public void testVelocityDirectionCalculation() {
+        ball.setVelocity(new Vector2D(10.0, 10.0));
+
+        Vector2D vel = ball.getVelocity();
+        double direction = Math.atan2(vel.getY(), vel.getX());
         assertEquals(Math.PI / 4, direction, 0.001, "방향 계산이 올바르지 않습니다"); // 45도 = π/4 라디안
     }
 }
@@ -703,15 +801,15 @@ public class MovableBallTest {
 @Override
 public void start(Stage stage) {
     // ... 초기화 코드 ...
-    
+
     GameLoop gameLoop = new GameLoop(world, gc);
-    
+
     // FPS 표시를 통해 게임 루프 동작 확인
     Label fpsLabel = new Label("FPS: 0");
-    gameLoop.setFpsListener(fps -> 
+    gameLoop.setFpsListener(fps ->
         Platform.runLater(() -> fpsLabel.setText("FPS: " + fps))
     );
-    
+
     gameLoop.start(); // 실제 실행하여 동작 확인
 }
 ```
@@ -727,85 +825,85 @@ import org.mockito.Mockito;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class MovableWorldTest {
-    
+
     private MovableWorld world;
-    
+
     @BeforeEach
     public void setUp() {
         world = new MovableWorld(800, 600);
     }
-    
+
     @Test
     public void testWorldCreation() {
         assertEquals(800, world.getWidth(), "World 너비가 올바르지 않습니다");
         assertEquals(600, world.getHeight(), "World 높이가 올바르지 않습니다");
     }
-    
+
     @Test
     public void testAddMovableBall() {
-        MovableBall ball = new MovableBall(100, 100, 20, Color.RED);
-        world.addBall(ball);
-        
+        MovableBall ball = new MovableBall(new Point(100, 100), 20, Color.RED);
+        world.add(ball);
+
         assertEquals(1, world.getBallCount(), "MovableBall이 추가되지 않았습니다");
     }
-    
+
     @Test
     public void testUpdate() {
-        MovableBall ball = new MovableBall(100, 100, 20, Color.RED);
-        ball.setDx(50.0);
-        ball.setDy(30.0);
-        world.addBall(ball);
-        
+        MovableBall ball = new MovableBall(new Point(100, 100), 20, Color.RED);
+        ball.setVelocity(new Vector2D(50.0, 30.0));
+        world.add(ball);
+
         double deltaTime = 0.1; // 0.1초
         world.update(deltaTime);
-        
+
         // 공이 이동했는지 확인
-        assertEquals(105.0, ball.getX(), 0.001, "update 후 공이 X 방향으로 이동하지 않았습니다");
-        assertEquals(103.0, ball.getY(), 0.001, "update 후 공이 Y 방향으로 이동하지 않았습니다");
+        Point newCenter = ball.getCenter();
+        assertEquals(105.0, newCenter.getX(), 0.001, "update 후 공이 X 방향으로 이동하지 않았습니다");
+        assertEquals(103.0, newCenter.getY(), 0.001, "update 후 공이 Y 방향으로 이동하지 않았습니다");
     }
-    
+
     @Test
     public void testUpdateMultipleBalls() {
-        MovableBall ball1 = new MovableBall(100, 100, 20, Color.RED);
-        MovableBall ball2 = new MovableBall(200, 200, 30, Color.BLUE);
-        
-        ball1.setDx(10.0);
-        ball1.setDy(20.0);
-        ball2.setDx(-15.0);
-        ball2.setDy(25.0);
-        
-        world.addBall(ball1);
-        world.addBall(ball2);
-        
+        MovableBall ball1 = new MovableBall(new Point(100, 100), 20, Color.RED);
+        MovableBall ball2 = new MovableBall(new Point(200, 200), 30, Color.BLUE);
+
+        ball1.setVelocity(new Vector2D(10.0, 20.0));
+        ball2.setVelocity(new Vector2D(-15.0, 25.0));
+
+        world.add(ball1);
+        world.add(ball2);
+
         world.update(1.0); // 1초
-        
-        assertEquals(110.0, ball1.getX(), 0.001, "첫 번째 공의 X 이동이 올바르지 않습니다");
-        assertEquals(120.0, ball1.getY(), 0.001, "첫 번째 공의 Y 이동이 올바르지 않습니다");
-        assertEquals(185.0, ball2.getX(), 0.001, "두 번째 공의 X 이동이 올바르지 않습니다");
-        assertEquals(225.0, ball2.getY(), 0.001, "두 번째 공의 Y 이동이 올바르지 않습니다");
+
+        Point center1 = ball1.getCenter();
+        Point center2 = ball2.getCenter();
+        assertEquals(110.0, center1.getX(), 0.001, "첫 번째 공의 X 이동이 올바르지 않습니다");
+        assertEquals(120.0, center1.getY(), 0.001, "첫 번째 공의 Y 이동이 올바르지 않습니다");
+        assertEquals(185.0, center2.getX(), 0.001, "두 번째 공의 X 이동이 올바르지 않습니다");
+        assertEquals(225.0, center2.getY(), 0.001, "두 번째 공의 Y 이동이 올바르지 않습니다");
     }
-    
+
     @Test
     public void testRender() {
         // GraphicsContext는 final 클래스이므로 mockito-inline 의존성이 필요합니다
         GraphicsContext gc = Mockito.mock(GraphicsContext.class);
-        MovableBall ball = new MovableBall(100, 100, 20, Color.GREEN);
-        world.addBall(ball);
-        
+        MovableBall ball = new MovableBall(new Point(100, 100), 20, Color.GREEN);
+        world.add(ball);
+
         assertDoesNotThrow(() -> {
-            world.render(gc);
+            world.draw(gc);
         }, "MovableWorld 렌더링 중 예외가 발생했습니다");
     }
-    
+
     @Test
     public void testInheritance() {
         // MovableWorld가 World를 상속받는지 확인
         assertTrue(world instanceof World, "MovableWorld는 World를 상속받아야 합니다");
-        
+
         // 부모 클래스의 메서드 사용 가능한지 확인
-        Ball staticBall = new Ball(50, 50, 15);
-        world.addBall(staticBall);
-        assertEquals(1, world.getBallCount(), "상속받은 addBall 메서드가 작동하지 않습니다");
+        Ball staticBall = new Ball(new Point(50, 50), 15);
+        world.add(staticBall);
+        assertEquals(1, world.getBallCount(), "상속받은 add 메서드가 작동하지 않습니다");
     }
 }
 ```
@@ -829,7 +927,7 @@ public class MovableWorldTest {
        </dependency>
    </dependencies>
    ```
-   
+
    **중요: Mockito 의존성 관련 참고사항**
    - GraphicsContext는 final 클래스이므로 일반적인 mockito-core로는 mock 생성이 불가능합니다
    - **mockito-inline**을 사용해야 final 클래스를 mock할 수 있습니다

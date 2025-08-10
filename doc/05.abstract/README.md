@@ -23,15 +23,16 @@
 **Shape 추상 클래스 설계**
 
 **필드:**
-- `x`, `y`: 위치 좌표 (protected)
+- `position`: Point로 위치 관리 (protected)
 
 **추상 메서드:**
 - `getArea()`: 면적 계산 (하위 클래스에서 구현)
 - `getPerimeter()`: 둘레 계산 (하위 클래스에서 구현)
 
 **구체 메서드:**
-- `getX()`, `getY()`: 위치 반환
-- `move(double dx, double dy)`: 위치 이동
+- `getPosition()`: 위치 반환 (Point)
+- `moveTo(Point newPosition)`: 위치 이동
+- `moveBy(Vector2D delta)`: 상대적 이동 (Vector는 이동량 표현에 사용)
 - `displayInfo()`: 정보 출력 (Template Method 패턴)
 
 **Template Method 패턴:**
@@ -40,12 +41,17 @@
 ```java
 // 추상 클래스 선언 예시
 public abstract class Shape {
+    protected Point position;
+
     // 추상 메서드 - 구현 없음
     public abstract double getArea();
-    
+
     // 구체 메서드 - 구현 있음
-    public void move(double dx, double dy) {
-        // 구현 코드
+    public void moveBy(Vector2D delta) {
+        this.position = new Point(
+            position.getX() + delta.getX(),
+            position.getY() + delta.getY()
+        );
     }
 }
 ```
@@ -58,7 +64,7 @@ public abstract class Shape {
 
 **추상 메서드:**
 - `getMinX()`: 최소 x 좌표
-- `getMinY()`: 최소 y 좌표  
+- `getMinY()`: 최소 y 좌표
 - `getMaxX()`: 최대 x 좌표
 - `getMaxY()`: 최대 y 좌표
 
@@ -66,7 +72,7 @@ public abstract class Shape {
 - `getWidth()`: 너비 계산 (maxX - minX)
 - `getHeight()`: 높이 계산 (maxY - minY)
 - `getCenterX()`, `getCenterY()`: 중심 좌표
-- `contains(double x, double y)`: 점 포함 여부
+- `contains(Point point)`: 점 포함 여부
 - `contains(Bounds other)`: 다른 Bounds 포함 여부
 - `intersects(Bounds other)`: 교차 여부
 
@@ -75,7 +81,7 @@ public abstract class Shape {
 Bounds를 상속받아 사각형 경계를 구현:
 
 **필드:**
-- `x`, `y`: 왼쪽 상단 모서리
+- `minX`, `minY`: 왼쪽 상단 모서리
 - `width`, `height`: 너비와 높이
 
 **구현 요구사항:**
@@ -106,7 +112,6 @@ maxY = centerY + radius
 n차원 벡터를 표현하는 추상 클래스입니다:
 
 **추상 메서드:**
-- `getDimension()`: 벡터의 차원 반환
 - `get(int index)`: 특정 인덱스의 값 반환
 - `set(int index, double value)`: 특정 인덱스에 값 설정
 - `createNew()`: 새 벡터 생성 (Factory Method 패턴)
@@ -120,14 +125,7 @@ n차원 벡터를 표현하는 추상 클래스입니다:
 
 Vector를 상속받아 2차원 벡터 구현:
 
-**필드:**
-- `x`, `y`: 벡터 구성 요소
-
 **추가 메서드:**
-- `getX()`, `getY()`: 각 구성 요소 반환
-- `add(Vector2D other)`: 벡터 덧셈
-- `subtract(Vector2D other)`: 벡터 뻔셈
-- `multiply(double scalar)`: 스칼라 곱셈
 - `angle()`: 벡터의 각도 (라디안)
 
 **Factory Method 패턴:**
@@ -147,7 +145,7 @@ Vector를 상속받아 2차원 벡터 구현:
 기존 Ball 클래스를 추상 클래스로 리팩토링:
 
 **필드:**
-- `position`: Vector2D로 위치 관리
+- `center`: Point로 위치 관리 (2장의 Ball 클래스와 일관성 유지)
 - `radius`: 반지름
 - `bounds`: Bounds 객체로 경계 관리
 
@@ -166,17 +164,24 @@ Vector를 상속받아 2차원 벡터 구현:
 AbstractBall을 상속받아 움직이는 공 구현:
 
 **추가 필드:**
-- `velocity`: 속도 벡터
+- `velocity`: Vector2D로 속도 벡터 관리 (이동량 계산에 사용)
 
 **구현 요구사항:**
 - `performUpdate()`: 속도에 따른 위치 업데이트
-- `setVelocity()`: 속도 설정
+  - 현재 위치(Point) + 속도(Vector2D) × 시간 = 새 위치(Point)
+- `setVelocity(Vector2D velocity)`: 속도 설정
+- `getVelocity()`: 속도 반환
 
 **리팩토링 이점:**
-1. Vector2D를 사용한 깨끗한 위치 관리
+1. Point로 위치, Vector2D로 이동량을 명확히 구분
 2. Bounds 객체로 경계 처리 통합
 3. Template Method로 업데이트 프로세스 표준화
 4. 확장 가능한 구조
+
+**위치와 벡터의 구분:**
+- Point: 절대적인 위치를 표현 (x, y 좌표)
+- Vector2D: 상대적인 이동량, 속도, 방향을 표현
+- 위치 + 벡터 = 새로운 위치
 
 ## 실습 과제
 
@@ -190,29 +195,23 @@ AbstractBall을 상속받아 움직이는 공 구현:
 @Test
 public void testBoundsIntersection() {
     Bounds rect = new RectangleBounds(0, 0, 100, 100);
-    Bounds circle = new CircleBounds(150, 50, 30);
-    
+    Bounds circle = new CircleBounds(new Point(150, 50), 30);
+
     assertFalse(rect.intersects(circle));
-    
-    circle = new CircleBounds(80, 50, 30);
+
+    circle = new CircleBounds(new Point(80, 50), 30);
     assertTrue(rect.intersects(circle));
 }
 ```
 
-### Lab 5-2: Vector 클래스 확장
-3D 벡터 구현 및 벡터 연산:
-- Vector3D 클래스
-- 외적(cross product) 구현
-- 각도 계산
-
-### Lab 5-3: 추상 클래스 기반 게임 객체
+### Lab 5-2: 추상 클래스 기반 게임 객체
 추상 클래스를 사용한 게임 객체 계층:
 **GameObject 추상 클래스 설계**
 
 모든 게임 객체의 기본 클래스:
 
 **필드:**
-- `position`: 위치 (Vector2D)
+- `position`: 위치 (Point)
 - `bounds`: 경계 (Bounds)
 
 **추상 메서드:**
@@ -222,13 +221,14 @@ public void testBoundsIntersection() {
 
 하위 클래스에서 각 게임 객체에 맞게 구현합니다.
 
-### Lab 5-4: 디자인 패턴 적용
+### Lab 5-3: 디자인 패턴 적용
 Factory Method와 Template Method 패턴 구현:
 **BallFactory 추상 클래스 설계**
 
 Factory Method 패턴을 사용한 공 생성:
 
 **추상 메서드:**
+- `createBall(Point center, double radius)`: 구체적인 Ball 생성
 - `createBall(double x, double y, double radius)`: 구체적인 Ball 생성
 
 **구체 메서드:**
@@ -253,46 +253,48 @@ y = minY + random() * height
 
 ```java
 public class AbstractTypeTest {
-    
+
     @Test
     public void testVector2DOperations() {
         Vector2D v1 = new Vector2D(3, 4);
         assertEquals(5.0, v1.magnitude(), 0.001);
-        
+
         Vector2D v2 = v1.normalize();
         assertEquals(1.0, v2.magnitude(), 0.001);
         assertEquals(0.6, v2.getX(), 0.001);
         assertEquals(0.8, v2.getY(), 0.001);
     }
-    
+
     @Test
     public void testBoundsContainment() {
         Bounds outer = new RectangleBounds(0, 0, 200, 200);
         Bounds inner = new CircleBounds(100, 100, 50);
-        
+
         assertTrue(outer.contains(inner));
         assertFalse(inner.contains(outer));
-        
+
         assertTrue(outer.contains(100, 100));
         assertTrue(inner.contains(100, 100));
     }
-    
+
     @Test
     public void testAbstractBallUpdate() {
-        SimpleMovableBall ball = new SimpleMovableBall(100, 100, 20);
-        ball.setVelocity(50, 30);
-        
-        double oldX = ball.getX();
-        double oldY = ball.getY();
-        
+        SimpleMovableBall ball = new SimpleMovableBall(new Point(100, 100), 20);
+        ball.setVelocity(new Vector2D(50, 30));
+
+        Point oldCenter = ball.getCenter();
+        double oldX = oldCenter.getX();
+        double oldY = oldCenter.getY();
+
         ball.update(1.0);
-        
-        assertEquals(oldX + 50, ball.getX(), 0.001);
-        assertEquals(oldY + 30, ball.getY(), 0.001);
-        
+
+        Point newCenter = ball.getCenter();
+        assertEquals(oldX + 50, newCenter.getX(), 0.001);
+        assertEquals(oldY + 30, newCenter.getY(), 0.001);
+
         // Bounds도 업데이트되었는지 확인
-        assertEquals(ball.getX(), ball.getBounds().getCenterX(), 0.001);
-        assertEquals(ball.getY(), ball.getBounds().getCenterY(), 0.001);
+        assertEquals(newCenter.getX(), ball.getBounds().getCenterX(), 0.001);
+        assertEquals(newCenter.getY(), ball.getBounds().getCenterY(), 0.001);
     }
 }
 ```
@@ -323,10 +325,10 @@ public class AbstractTypeTest {
 ### 1. 추상 클래스 인스턴스화 시도
 ```java
 // 잘못된 코드
-AbstractBall ball = new AbstractBall(0, 0, 10); // 컴파일 에러!
+AbstractBall ball = new AbstractBall(new Point(0, 0), 10); // 컴파일 에러!
 
 // 올바른 코드
-AbstractBall ball = new SimpleMovableBall(0, 0, 10);
+AbstractBall ball = new SimpleMovableBall(new Point(0, 0), 10);
 ```
 
 ### 2. 추상 메서드 구현 누락
@@ -369,85 +371,87 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ShapeTest {
-    
+
     @Test
     public void testCircleShapeCreation() {
-        Circle circle = new Circle(100, 100, 30);
-        
-        assertEquals(100, circle.getX(), 0.001, "Circle X 좌표가 잘못되었습니다");
-        assertEquals(100, circle.getY(), 0.001, "Circle Y 좌표가 잘못되었습니다");
+        Circle circle = new Circle(new Point(100, 100), 30);
+
+        Point position = circle.getPosition();
+        assertEquals(100, position.getX(), 0.001, "Circle X 좌표가 잘못되었습니다");
+        assertEquals(100, position.getY(), 0.001, "Circle Y 좌표가 잘못되었습니다");
         assertEquals(30, circle.getRadius(), 0.001, "Circle 반지름이 잘못되었습니다");
-        
+
         // Shape로 타입 캐스팅 가능한지 확인
         Shape shape = circle;
         assertEquals("Circle", shape.getShapeType(), "Circle 타입이 올바르지 않습니다");
     }
-    
+
     @Test
     public void testRectangleShapeCreation() {
-        Rectangle rectangle = new Rectangle(50, 75, 100, 80);
-        
-        assertEquals(50, rectangle.getX(), 0.001, "Rectangle X 좌표가 잘못되었습니다");
-        assertEquals(75, rectangle.getY(), 0.001, "Rectangle Y 좌표가 잘못되었습니다");
+        Rectangle rectangle = new Rectangle(new Point(50, 75), 100, 80);
+
+        Point position = rectangle.getPosition();
+        assertEquals(50, position.getX(), 0.001, "Rectangle X 좌표가 잘못되었습니다");
+        assertEquals(75, position.getY(), 0.001, "Rectangle Y 좌표가 잘못되었습니다");
         assertEquals(100, rectangle.getWidth(), 0.001, "Rectangle 너비가 잘못되었습니다");
         assertEquals(80, rectangle.getHeight(), 0.001, "Rectangle 높이가 잘못되었습니다");
-        
+
         Shape shape = rectangle;
         assertEquals("Rectangle", shape.getShapeType(), "Rectangle 타입이 올바르지 않습니다");
     }
-    
+
     @Test
     public void testCircleArea() {
-        Circle circle = new Circle(0, 0, 10);
+        Circle circle = new Circle(new Point(0, 0), 10);
         double expectedArea = Math.PI * 10 * 10;
-        
+
         assertEquals(expectedArea, circle.getArea(), 0.001, "Circle 면적 계산이 잘못되었습니다");
     }
-    
+
     @Test
     public void testRectangleArea() {
-        Rectangle rectangle = new Rectangle(0, 0, 20, 15);
+        Rectangle rectangle = new Rectangle(new Point(0, 0), 20, 15);
         double expectedArea = 20 * 15;
-        
+
         assertEquals(expectedArea, rectangle.getArea(), 0.001, "Rectangle 면적 계산이 잘못되었습니다");
     }
-    
+
     @Test
     public void testCirclePerimeter() {
-        Circle circle = new Circle(0, 0, 10);
+        Circle circle = new Circle(new Point(0, 0), 10);
         double expectedPerimeter = 2 * Math.PI * 10;
-        
+
         assertEquals(expectedPerimeter, circle.getPerimeter(), 0.001, "Circle 둘레 계산이 잘못되었습니다");
     }
-    
+
     @Test
     public void testRectanglePerimeter() {
-        Rectangle rectangle = new Rectangle(0, 0, 20, 15);
+        Rectangle rectangle = new Rectangle(new Point(0, 0), 20, 15);
         double expectedPerimeter = 2 * (20 + 15);
-        
+
         assertEquals(expectedPerimeter, rectangle.getPerimeter(), 0.001, "Rectangle 둘레 계산이 잘못되었습니다");
     }
-    
+
     @Test
     public void testAbstractShapeCannotBeInstantiated() {
         // 추상 클래스는 직접 인스턴스화할 수 없음을 확인
         // 이는 컴파일 타임에 확인되므로 런타임 테스트로는 검증하기 어려움
         // 대신 하위 클래스가 올바르게 추상 메서드를 구현하는지 확인
-        
-        Circle circle = new Circle(0, 0, 10);
+
+        Circle circle = new Circle(new Point(0, 0), 10);
         assertTrue(circle instanceof Shape, "Circle은 Shape의 인스턴스여야 합니다");
-        
-        Rectangle rectangle = new Rectangle(0, 0, 10, 10);
+
+        Rectangle rectangle = new Rectangle(new Point(0, 0), 10, 10);
         assertTrue(rectangle instanceof Shape, "Rectangle은 Shape의 인스턴스여야 합니다");
     }
-    
+
     @Test
     public void testPolymorphism() {
         Shape[] shapes = {
             new Circle(0, 0, 10),
             new Rectangle(0, 0, 20, 15)
         };
-        
+
         // 다형성을 통해 다양한 타입의 도형을 동일하게 처리
         for (Shape shape : shapes) {
             assertTrue(shape.getArea() > 0, "모든 도형의 면적은 양수여야 합니다");
@@ -466,93 +470,93 @@ import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class Vector2DExtendedTest {
-    
+
     private Vector2D vector1;
     private Vector2D vector2;
-    
+
     @BeforeEach
     public void setUp() {
         vector1 = new Vector2D(3.0, 4.0);
         vector2 = new Vector2D(1.0, 2.0);
     }
-    
+
     @Test
     public void testVectorCreation() {
         assertEquals(3.0, vector1.getX(), 0.001, "Vector X 성분이 잘못되었습니다");
         assertEquals(4.0, vector1.getY(), 0.001, "Vector Y 성분이 잘못되었습니다");
     }
-    
+
     @Test
     public void testPolarConstruction() {
         // 극좌표로 벡터 생성
         Vector2D polar = Vector2D.fromPolar(5.0, Math.PI / 2); // 크기 5, 각도 90도
-        
+
         assertEquals(0.0, polar.getX(), 0.001, "극좌표 X 성분이 잘못되었습니다");
         assertEquals(5.0, polar.getY(), 0.001, "극좌표 Y 성분이 잘못되었습니다");
     }
-    
+
     @Test
     public void testStaticFactoryMethods() {
         Vector2D zero = Vector2D.zero();
         assertEquals(0.0, zero.getX(), 0.001, "영벡터 X 성분이 0이 아닙니다");
         assertEquals(0.0, zero.getY(), 0.001, "영벡터 Y 성분이 0이 아닙니다");
-        
+
         Vector2D unitX = Vector2D.unitX();
         assertEquals(1.0, unitX.getX(), 0.001, "단위 X 벡터의 X 성분이 1이 아닙니다");
         assertEquals(0.0, unitX.getY(), 0.001, "단위 X 벡터의 Y 성분이 0이 아닙니다");
-        
+
         Vector2D unitY = Vector2D.unitY();
         assertEquals(0.0, unitY.getX(), 0.001, "단위 Y 벡터의 X 성분이 0이 아닙니다");
         assertEquals(1.0, unitY.getY(), 0.001, "단위 Y 벡터의 Y 성분이 1이 아닙니다");
     }
-    
+
     @Test
     public void testVectorArithmetic() {
         Vector2D sum = vector1.add(vector2);
         assertEquals(4.0, sum.getX(), 0.001, "벡터 덧셈 X 성분이 잘못되었습니다");
         assertEquals(6.0, sum.getY(), 0.001, "벡터 덧셈 Y 성분이 잘못되었습니다");
-        
+
         Vector2D diff = vector1.subtract(vector2);
         assertEquals(2.0, diff.getX(), 0.001, "벡터 뺄셈 X 성분이 잘못되었습니다");
         assertEquals(2.0, diff.getY(), 0.001, "벡터 뺄셈 Y 성분이 잘못되었습니다");
-        
+
         Vector2D scaled = vector1.multiply(2.0);
         assertEquals(6.0, scaled.getX(), 0.001, "벡터 곱셈 X 성분이 잘못되었습니다");
         assertEquals(8.0, scaled.getY(), 0.001, "벡터 곱셈 Y 성분이 잘못되었습니다");
-        
+
         Vector2D divided = vector1.divide(2.0);
         assertEquals(1.5, divided.getX(), 0.001, "벡터 나눗셈 X 성분이 잘못되었습니다");
         assertEquals(2.0, divided.getY(), 0.001, "벡터 나눗셈 Y 성분이 잘못되었습니다");
     }
-    
+
     @Test
     public void testVectorMagnitudeAndDirection() {
         assertEquals(5.0, vector1.magnitude(), 0.001, "벡터 크기가 잘못되었습니다");
-        
+
         double expectedAngle = Math.atan2(4.0, 3.0);
         assertEquals(expectedAngle, vector1.angle(), 0.001, "벡터 각도가 잘못되었습니다");
-        
+
         Vector2D normalized = vector1.normalize();
         assertEquals(1.0, normalized.magnitude(), 0.001, "정규화된 벡터의 크기가 1이 아닙니다");
         assertEquals(0.6, normalized.getX(), 0.001, "정규화된 벡터 X 성분이 잘못되었습니다");
         assertEquals(0.8, normalized.getY(), 0.001, "정규화된 벡터 Y 성분이 잘못되었습니다");
     }
-    
+
     @Test
     public void testDotAndCrossProduct() {
         double dotProduct = vector1.dot(vector2);
         assertEquals(11.0, dotProduct, 0.001, "내적 계산이 잘못되었습니다"); // 3*1 + 4*2 = 11
-        
+
         double crossProduct = vector1.cross(vector2);
         assertEquals(2.0, crossProduct, 0.001, "외적 계산이 잘못되었습니다"); // 3*2 - 4*1 = 2
     }
-    
+
     @Test
     public void testDistanceAndProjection() {
         double distance = vector1.distance(vector2);
         Vector2D diff = vector1.subtract(vector2);
         assertEquals(diff.magnitude(), distance, 0.001, "거리 계산이 잘못되었습니다");
-        
+
         Vector2D projection = vector1.project(vector2);
         // v1 투영 v2 = (v1·v2/|v2|²) × v2
         double scalar = vector1.dot(vector2) / vector2.dot(vector2);
@@ -560,44 +564,44 @@ public class Vector2DExtendedTest {
         assertEquals(expected.getX(), projection.getX(), 0.001, "투영 X 성분이 잘못되었습니다");
         assertEquals(expected.getY(), projection.getY(), 0.001, "투영 Y 성분이 잘못되었습니다");
     }
-    
+
     @Test
     public void testVectorRotation() {
         Vector2D rotated90 = vector1.rotate(Math.PI / 2); // 90도 회전
         assertEquals(-4.0, rotated90.getX(), 0.001, "90도 회전 X 성분이 잘못되었습니다");
         assertEquals(3.0, rotated90.getY(), 0.001, "90도 회전 Y 성분이 잘못되었습니다");
-        
+
         Vector2D rotated180 = vector1.rotate(Math.PI); // 180도 회전
         assertEquals(-3.0, rotated180.getX(), 0.001, "180도 회전 X 성분이 잘못되었습니다");
         assertEquals(-4.0, rotated180.getY(), 0.001, "180도 회전 Y 성분이 잘못되었습니다");
     }
-    
+
     @Test
     public void testImmutability() {
         Vector2D original = new Vector2D(5.0, 6.0);
         Vector2D result = original.add(vector1);
-        
+
         // 원본 벡터는 변경되지 않아야 함
         assertEquals(5.0, original.getX(), 0.001, "원본 벡터가 변경되었습니다");
         assertEquals(6.0, original.getY(), 0.001, "원본 벡터가 변경되었습니다");
-        
+
         // 새로운 벡터가 반환되어야 함
         assertEquals(8.0, result.getX(), 0.001, "새 벡터 X 성분이 잘못되었습니다");
         assertEquals(10.0, result.getY(), 0.001, "새 벡터 Y 성분이 잘못되었습니다");
     }
-    
+
     @Test
     public void testEqualsAndHashCode() {
         Vector2D vector3 = new Vector2D(3.0, 4.0);
         Vector2D vector4 = new Vector2D(3.1, 4.0);
-        
+
         assertEquals(vector1, vector3, "동일한 성분의 벡터들이 같다고 판단되지 않았습니다");
         assertNotEquals(vector1, vector4, "다른 성분의 벡터들이 같다고 판단되었습니다");
-        
-        assertEquals(vector1.hashCode(), vector3.hashCode(), 
+
+        assertEquals(vector1.hashCode(), vector3.hashCode(),
                     "동일한 벡터들의 해시코드가 다릅니다");
     }
-    
+
     @Test
     public void testToString() {
         String vectorString = vector1.toString();
@@ -619,11 +623,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestBall extends AbstractBall {
     private boolean updateCalled = false;
     private double lastDeltaTime;
-    
-    public TestBall(double x, double y, double radius) {
-        super(x, y, radius);
+
+    public TestBall(Point center, double radius) {
+        super(center.getX(), center.getY(), radius);
     }
-    
+
     @Override
     protected void performUpdate(double deltaTime) {
         this.updateCalled = true;
@@ -632,109 +636,110 @@ class TestBall extends AbstractBall {
         setX(getX() + getDx() * deltaTime);
         setY(getY() + getDy() * deltaTime);
     }
-    
+
     public boolean isUpdateCalled() {
         return updateCalled;
     }
-    
+
     public double getLastDeltaTime() {
         return lastDeltaTime;
     }
-    
+
     public void resetUpdateFlag() {
         updateCalled = false;
     }
 }
 
 public class AbstractBallTest {
-    
+
     private TestBall ball;
-    
+
     @BeforeEach
     public void setUp() {
-        ball = new TestBall(100, 100, 20);
+        ball = new TestBall(new Point(100, 100), 20);
     }
-    
+
     @Test
     public void testAbstractBallCreation() {
-        assertEquals(100, ball.getX(), 0.001, "AbstractBall X 좌표가 잘못되었습니다");
-        assertEquals(100, ball.getY(), 0.001, "AbstractBall Y 좌표가 잘못되었습니다");
+        TestAbstractBall ball = new TestAbstractBall(new Point(100, 100), 20);
+        Point center = ball.getCenter();
+        assertEquals(100, center.getX(), 0.001, "AbstractBall X 좌표가 잘못되었습니다");
+        assertEquals(100, center.getY(), 0.001, "AbstractBall Y 좌표가 잘못되었습니다");
         assertEquals(20, ball.getRadius(), 0.001, "AbstractBall 반지름이 잘못되었습니다");
-        
-        // 기본값 확인
-        assertEquals(0.0, ball.getDx(), 0.001, "초기 X 속도가 0이 아닙니다");
-        assertEquals(0.0, ball.getDy(), 0.001, "초기 Y 속도가 0이 아닙니다");
-        assertEquals(Color.BLACK, ball.getColor(), "기본 색상이 BLACK이 아닙니다");
+
+        // SimpleMovableBall의 속도 기본값 확인
+        SimpleMovableBall movableBall = new SimpleMovableBall(new Point(50, 50), 10);
+        Vector2D velocity = movableBall.getVelocity();
+        assertEquals(0.0, velocity.getX(), 0.001, "초기 X 속도가 0이 아닙니다");
+        assertEquals(0.0, velocity.getY(), 0.001, "초기 Y 속도가 0이 아닙니다");
     }
-    
+
     @Test
     public void testTemplateMethodPattern() {
-        ball.setDx(50);
-        ball.setDy(30);
-        
+        ball.setVelocity(new Vector2D(50, 30));
+
         // Template Method인 update 호출
         ball.update(0.1);
-        
+
         // performUpdate가 호출되었는지 확인
         assertTrue(ball.isUpdateCalled(), "performUpdate 메서드가 호출되지 않았습니다");
         assertEquals(0.1, ball.getLastDeltaTime(), 0.001, "deltaTime이 올바르게 전달되지 않았습니다");
-        
+
         // 이동이 올바르게 수행되었는지 확인
         assertEquals(105, ball.getX(), 0.001, "Template Method를 통한 X 이동이 잘못되었습니다");
         assertEquals(103, ball.getY(), 0.001, "Template Method를 통한 Y 이동이 잘못되었습니다");
-        
+
         // 후처리 확인 (충돌 체크, 경계 처리 등이 여기서 수행될 수 있음)
         // 이는 AbstractBall의 update 메서드에서 performUpdate 호출 후 수행
     }
-    
+
     @Test
     public void testVelocityMethods() {
         ball.setVelocity(new Vector2D(75, 50));
-        
+
         assertEquals(75, ball.getDx(), 0.001, "벡터 속도 설정 X가 잘못되었습니다");
         assertEquals(50, ball.getDy(), 0.001, "벡터 속도 설정 Y가 잘못되었습니다");
-        
+
         Vector2D velocity = ball.getVelocity();
         assertEquals(75, velocity.getX(), 0.001, "벡터 속도 조회 X가 잘못되었습니다");
         assertEquals(50, velocity.getY(), 0.001, "벡터 속도 조회 Y가 잘못되었습니다");
     }
-    
+
     @Test
     public void testBoundsIntegration() {
         Bounds bounds = ball.getBounds();
-        
+
         assertTrue(bounds instanceof CircleBounds, "AbstractBall의 bounds는 CircleBounds여야 합니다");
-        
+
         CircleBounds circleBounds = (CircleBounds) bounds;
         assertEquals(100, circleBounds.getCenterX(), 0.001, "Bounds 중심 X가 잘못되었습니다");
         assertEquals(100, circleBounds.getCenterY(), 0.001, "Bounds 중심 Y가 잘못되었습니다");
         assertEquals(20, circleBounds.getRadius(), 0.001, "Bounds 반지름이 잘못되었습니다");
     }
-    
+
     @Test
     public void testMultipleUpdates() {
-        ball.setDx(10);
-        ball.setDy(5);
-        
+        ball.setVelocity((10, 5);
+
         // 여러 번 업데이트 수행
         for (int i = 0; i < 5; i++) {
             ball.resetUpdateFlag();
             ball.update(0.1);
             assertTrue(ball.isUpdateCalled(), "매번 performUpdate가 호출되어야 합니다");
         }
-        
+
         // 최종 위치 확인
         assertEquals(105, ball.getX(), 0.001, "5번 업데이트 후 X 위치가 잘못되었습니다");
         assertEquals(102.5, ball.getY(), 0.001, "5번 업데이트 후 Y 위치가 잘못되었습니다");
     }
-    
+
     @Test
     public void testHookMethods() {
         // Template Method 패턴에서 hook 메서드들이 있다면 테스트
         // 예: beforeUpdate, afterUpdate 등이 AbstractBall에 정의되어 있다면
-        
+
         ball.update(0.1);
-        
+
         // Hook 메서드들이 올바른 순서로 호출되는지 확인
         // 이는 실제 AbstractBall 구현에 따라 달라질 수 있음
         assertTrue(ball.isUpdateCalled(), "핵심 업데이트 로직이 호출되었습니다");
@@ -749,74 +754,74 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class BoundsFactoryTest {
-    
+
     @Test
     public void testCreateCircleBounds() {
-        Bounds bounds = BoundsFactory.createCircleBounds(100, 150, 25);
-        
+        Bounds bounds = BoundsFactory.createCircleBounds(new Point(100, 150), 25);
+
         assertTrue(bounds instanceof CircleBounds, "CircleBounds 타입이 생성되지 않았습니다");
-        
+
         CircleBounds circle = (CircleBounds) bounds;
         assertEquals(100, circle.getCenterX(), 0.001, "Circle X 중심이 잘못되었습니다");
         assertEquals(150, circle.getCenterY(), 0.001, "Circle Y 중심이 잘못되었습니다");
         assertEquals(25, circle.getRadius(), 0.001, "Circle 반지름이 잘못되었습니다");
     }
-    
+
     @Test
     public void testCreateRectangleBounds() {
         Bounds bounds = BoundsFactory.createRectangleBounds(50, 75, 120, 80);
-        
+
         assertTrue(bounds instanceof RectangleBounds, "RectangleBounds 타입이 생성되지 않았습니다");
-        
+
         RectangleBounds rect = (RectangleBounds) bounds;
         assertEquals(50, rect.getX(), 0.001, "Rectangle X가 잘못되었습니다");
         assertEquals(75, rect.getY(), 0.001, "Rectangle Y가 잘못되었습니다");
         assertEquals(120, rect.getWidth(), 0.001, "Rectangle 너비가 잘못되었습니다");
         assertEquals(80, rect.getHeight(), 0.001, "Rectangle 높이가 잘못되었습니다");
     }
-    
+
     @Test
     public void testFactoryMethodPattern() {
         // Factory Method 패턴의 이점: 클라이언트 코드는 구체적인 클래스를 몰라도 됨
         Bounds[] bounds = {
-            BoundsFactory.createCircleBounds(0, 0, 10),
+            BoundsFactory.createCircleBounds(new Point(0, 0), 10),
             BoundsFactory.createRectangleBounds(0, 0, 20, 15)
         };
-        
+
         // 다형성을 통해 동일하게 처리
         for (Bounds bound : bounds) {
             assertTrue(bound.getMinX() >= 0 || bound.getMinX() < 0, "Bounds가 올바르게 생성되었습니다");
             assertTrue(bound.getArea() > 0, "모든 Bounds의 면적은 양수여야 합니다");
         }
     }
-    
+
     @Test
     public void testInvalidParameters() {
         // 유효하지 않은 매개변수에 대한 처리
         assertThrows(IllegalArgumentException.class, () -> {
-            BoundsFactory.createCircleBounds(0, 0, -5); // 음수 반지름
+            BoundsFactory.createCircleBounds(new Point(0, 0), -5); // 음수 반지름
         }, "음수 반지름에 대해 예외가 발생하지 않았습니다");
-        
+
         assertThrows(IllegalArgumentException.class, () -> {
             BoundsFactory.createRectangleBounds(0, 0, -10, 5); // 음수 너비
         }, "음수 너비에 대해 예외가 발생하지 않았습니다");
-        
+
         assertThrows(IllegalArgumentException.class, () -> {
             BoundsFactory.createRectangleBounds(0, 0, 10, -5); // 음수 높이
         }, "음수 높이에 대해 예외가 발생하지 않았습니다");
     }
-    
+
     @Test
     public void testFactoryConsistency() {
         // 팩토리로 생성한 객체들이 일관된 행동을 보이는지 확인
-        CircleBounds circle1 = new CircleBounds(50, 50, 20);
-        Bounds circle2 = BoundsFactory.createCircleBounds(50, 50, 20);
-        
-        assertEquals(circle1.getArea(), circle2.getArea(), 0.001, 
+        CircleBounds circle1 = new CircleBounds(new Point(50, 50), 20);
+        Bounds circle2 = BoundsFactory.createCircleBounds(new Point(50, 50), 20);
+
+        assertEquals(circle1.getArea(), circle2.getArea(), 0.001,
                     "직접 생성과 팩토리 생성 결과가 다릅니다");
         assertEquals(circle1.getMinX(), circle2.getMinX(), 0.001,
                     "직접 생성과 팩토리 생성의 경계값이 다릅니다");
-        
+
         assertTrue(circle1.intersects(circle2), "동일한 원들이 교차하지 않는다고 판단되었습니다");
     }
 }

@@ -125,7 +125,6 @@ Ball을 상속받아 색상 정보를 추가합니다:
 **추가 메서드:**
 - `getColor()`: 색상 반환
 - `setColor(Color color)`: 색상 변경 (null 체크 필요)
-- `draw(GraphicsContext gc)`: 자신을 Canvas에 그리기
 
 **구현 힌트:**
 ```java
@@ -183,11 +182,6 @@ public void draw(GraphicsContext gc) {
     // 공 채우기
     gc.setFill(this.color);
     gc.fillOval(leftX, topY, diameter, diameter);
-
-    // 테두리 그리기
-    gc.setStroke(Color.BLACK);
-    gc.setLineWidth(2);
-    gc.strokeOval(leftX, topY, diameter, diameter);
 }
 ```
 
@@ -293,15 +287,15 @@ public class Ball {
 ```java
 @Test
 public void testBallCreation() {
-    Ball ball = new Ball(100, 200, 30);
-    assertEquals(100, ball.getX());
-    assertEquals(200, ball.getY());
+    Ball ball = new Ball(new Point(100, 200), 30);
+    assertEquals(100, ball.getCenter().getX());
+    assertEquals(200, ball.getCenter().getY());
     assertEquals(30, ball.getRadius());
 }
 
 @Test
 public void testBallArea() {
-    Ball ball = new Ball(0, 0, 10);
+    Ball ball = new Ball(new Point(0, 0), 10);
     assertEquals(Math.PI * 100, ball.getArea(), 0.001);
 }
 ```
@@ -312,6 +306,7 @@ public void testBallArea() {
 - 여러 생성자 오버로딩
 - 색상 변경 메서드
 - 유효성 검사
+- GraphicContext를 받아서 그리기 추가
 
 ### Lab 2-3: BallWorld 애플리케이션
 JavaFX를 사용하여 여러 개의 공을 화면에 표시:
@@ -400,23 +395,23 @@ public class BallTest {
     @Test
     @DisplayName("contains 메서드 테스트")
     public void testContains() {
-        Ball ball = new Ball(100, 100, 50);
+        Ball ball = new Ball(new Point(100, 100), 50);
 
         // 중심점은 포함
-        assertTrue(ball.contains(100, 100));
+        assertTrue(ball.contains(new Point(100, 100)));
 
         // 경계 내부의 점
-        assertTrue(ball.contains(120, 120));
+        assertTrue(ball.contains(new Point(120, 120)));
 
         // 경계 외부의 점
-        assertFalse(ball.contains(200, 200));
+        assertFalse(ball.contains(new Point(200, 200)));
     }
 
     @Test
     @DisplayName("World에 공 추가 테스트")
     public void testWorldAddBall() {
         World world = new World(500, 500);
-        Ball ball = new Ball(250, 250, 20);
+        Ball ball = new Ball(new Point(250, 250), 20);
 
         world.add(ball);
         assertEquals(1, world.getBalls().size());
@@ -507,10 +502,10 @@ public class BallTest {
     @Test
     public void testBallCreation() {
         // x, y 좌표로 생성하는 편의 생성자 테스트
-        Ball ball = new Ball(100, 200, 30);
+        Ball ball = new Ball(new Point(100, 200), 30);
         Point center = ball.getCenter();
-        assertEquals(100, center.getX(), 0.001, "X 좌표가 올바르게 설정되지 않았습니다");
-        assertEquals(200, center.getY(), 0.001, "Y 좌표가 올바르게 설정되지 않았습니다");
+        assertEquals(100, center.getCenter().getX(), 0.001, "X 좌표가 올바르게 설정되지 않았습니다");
+        assertEquals(200, center.getCenter().getY(), 0.001, "Y 좌표가 올바르게 설정되지 않았습니다");
         assertEquals(30, ball.getRadius(), 0.001, "반지름이 올바르게 설정되지 않았습니다");
     }
 
@@ -527,7 +522,7 @@ public class BallTest {
 
     @Test
     public void testMoveTo() {
-        Ball ball = new Ball(50, 75, 20);
+        Ball ball = new Ball(new Point(50, 75), 20);
 
         // moveTo 테스트
         Point newCenter = new Point(150, 175);
@@ -540,46 +535,44 @@ public class BallTest {
 
     @Test
     public void testRadiusValidation() {
+        Point center = new Point(0, 0);
+
         // 유효하지 않은 반지름 테스트
         assertThrows(IllegalArgumentException.class, () -> {
-            new Ball(0, 0, -5); // 음수 반지름은 예외 발생해야 함
+            new Ball(ceneter, -5); // 음수 반지름은 예외 발생해야 함
         }, "음수 반지름에 대해 예외가 발생하지 않았습니다");
 
         assertThrows(IllegalArgumentException.class, () -> {
-            new Ball(0, 0, 0); // 0 반지름도 예외 발생해야 함
+            new Ball(center, 0); // 0 반지름도 예외 발생해야 함
         }, "0 반지름에 대해 예외가 발생하지 않았습니다");
     }
 
-    @Test
-    public void testSetRadius() {
-        Ball ball = new Ball(0, 0, 10);
-        ball.setRadius(25);
-        assertEquals(25, ball.getRadius(), 0.001, "setRadius가 올바르게 작동하지 않습니다");
-
-        // 유효하지 않은 반지름 설정 시 예외 발생 확인
-        assertThrows(IllegalArgumentException.class, () -> {
-            ball.setRadius(-10);
-        }, "음수 반지름 설정 시 예외가 발생하지 않았습니다");
-    }
 
     @Test
     public void testContains() {
-        Ball ball = new Ball(100, 100, 50);
+        Point center = new Point(100, 100);
+        Point innerPoint = new Point(120, 120);
+        Point outerPoint1 = new Point(200, 200);
+        Point outerPoint2 = new Point(50, 50);
+        Point linePoint = new Point(150, 100);
+
+        Ball ball = new Ball(center, 50);
 
         // 공 내부의 점들
         assertTrue(ball.contains(100, 100), "중심점이 포함되지 않았습니다");
         assertTrue(ball.contains(120, 120), "공 내부 점이 포함되지 않았습니다");
 
         // Point를 사용한 contains 테스트
-        assertTrue(ball.contains(new Point(100, 100)), "중심점이 포함되지 않았습니다");
-        assertTrue(ball.contains(new Point(120, 120)), "공 내부 점이 포함되지 않았습니다");
+        assertTrue(ball.contains(center)), "중심점이 포함되지 않았습니다");
+        assertTrue(ball.contains(innerPoint), "공 내부 점이 포함되지 않았습니다");
 
         // 공 외부의 점들
-        assertFalse(ball.contains(200, 200), "공 외부 점이 포함되었습니다");
-        assertFalse(ball.contains(new Point(50, 50)), "공 외부 점이 포함되었습니다");
+        assertFalse(ball.contains(outerPoint1), "공 외부 점이 포함되었습니다");
+        assertFalse(ball.contains(outerPoint2), "공 외부 점이 포함되었습니다");
 
         // 경계선상의 점 (반지름 거리)
         assertTrue(ball.contains(150, 100), "경계선상의 점이 포함되지 않았습니다");
+        assertTrue(ball.contains(linePoint), "경계선상의 점이 포함되지 않았습니다");
     }
 }
 ```
@@ -598,7 +591,7 @@ public class PaintableBallTest {
 
     @Test
     public void testPaintableBallCreation() {
-        PaintableBall ball = new PaintableBall(100, 100, 20, Color.RED);
+        PaintableBall ball = new PaintableBall(new Point(100, 100), 20, Color.RED);
 
         // 상속받은 Ball의 속성들 확인
         Point center = ball.getCenter();
@@ -612,7 +605,7 @@ public class PaintableBallTest {
 
     @Test
     public void testPaintableBallInheritance() {
-        PaintableBall paintableBall = new PaintableBall(100, 100, 20, Color.BLUE);
+        PaintableBall paintableBall = new PaintableBall(new Point(100, 100), 20, Color.BLUE);
 
         // Ball의 메서드들이 작동하는지 확인 (상속 확인)
         assertTrue(paintableBall instanceof Ball, "PaintableBall은 Ball을 상속받아야 합니다");
@@ -630,7 +623,7 @@ public class PaintableBallTest {
 
     @Test
     public void testColorHandling() {
-        PaintableBall ball = new PaintableBall(0, 0, 10, Color.GREEN);
+        PaintableBall ball = new PaintableBall(new Point(0, 0), 10, Color.GREEN);
 
         // 색상 변경
         ball.setColor(Color.YELLOW);
@@ -644,7 +637,7 @@ public class PaintableBallTest {
     @Test
     public void testDefaultColor() {
         // 색상 없이 생성하는 생성자 테스트
-        PaintableBall ball = new PaintableBall(100, 100, 10);
+        PaintableBall ball = new PaintableBall(new Point(100, 100), 10);
         assertNotNull(ball.getColor(), "기본 색상이 설정되어야 합니다");
         assertEquals(Color.RED, ball.getColor(), "기본 색상은 빨간색이어야 합니다");
     }
@@ -653,16 +646,14 @@ public class PaintableBallTest {
     public void testDraw() {
         // Mock GraphicsContext 생성 (mockito-inline 필요)
         GraphicsContext gc = Mockito.mock(GraphicsContext.class);
-        PaintableBall ball = new PaintableBall(100, 100, 25, Color.BLUE);
+        PaintableBall ball = new PaintableBall(new Point(100, 100), 25, Color.BLUE);
 
         // draw 메서드 호출
         ball.draw(gc);
 
         // 적절한 메서드들이 호출되었는지 확인
         verify(gc).setFill(Color.BLUE);
-        verify(gc).fillOval(75, 75, 50, 50); // x-r, y-r, 2r, 2r
-        verify(gc).setStroke(Color.BLACK);
-        verify(gc).strokeOval(75, 75, 50, 50);
+        verify(gc).fillOval(getCenter().getX() - getRadius(), getCenter.getY() - getRadius(), getRadius() * 2, getRadius() * 2);
     }
 }
 ```
@@ -706,9 +697,9 @@ public class WorldTest {
 
     @Test
     public void testAddMultipleBalls() {
-        Ball ball1 = new Ball(100, 100, 20);
-        Ball ball2 = new Ball(200, 200, 30);
-        PaintableBall ball3 = new PaintableBall(300, 300, 25, Color.RED);
+        Ball ball1 = new Ball(new Point(100, 100), 20);
+        Ball ball2 = new Ball(new Point(200, 200), 30);
+        PaintableBall ball3 = new PaintableBall(new Point(300, 300), 25, Color.RED);
 
         world.add(ball1);
         world.add(ball2);
@@ -720,12 +711,12 @@ public class WorldTest {
     @Test
     public void testBoundaryCheck() {
         // 경계 내부의 공 - 추가 성공
-        Ball validBall = new Ball(400, 300, 50);
+        Ball validBall = new Ball(new Point(400, 300), 50);
         world.add(validBall);
         assertEquals(1, world.getBalls().size(), "경계 내부의 공이 추가되어야 합니다");
 
         // 경계 외부의 공 - 추가 실패 (예외 발생)
-        Ball invalidBall = new Ball(50, 50, 100); // 왼쪽 상단 밖으로 나감
+        Ball invalidBall = new Ball(new Point(50, 50), 100); // 왼쪽 상단 밖으로 나감
         assertThrows(IllegalArgumentException.class, () -> {
             world.add(invalidBall);
         }, "경계 외부의 공은 추가되면 안됩니다");
@@ -733,7 +724,7 @@ public class WorldTest {
 
     @Test
     public void testDefensiveCopy() {
-        PaintableBall ball = new PaintableBall(400, 300, 25, Color.BLUE);
+        PaintableBall ball = new PaintableBall(new Point(400, 300), 25, Color.BLUE);
         world.add(ball);
 
         List<Ball> balls = world.getBalls();
@@ -745,7 +736,7 @@ public class WorldTest {
 
     @Test
     public void testRemoveBall() {
-        Ball ball = new Ball(100, 100, 20);
+        Ball ball = new Ball(new Point(100, 100), 20);
         world.add(ball);
         assertEquals(1, world.getBallCount(), "Ball 추가 확인");
 
@@ -763,17 +754,16 @@ public class WorldTest {
         GraphicsContext gc = Mockito.mock(GraphicsContext.class);
 
         // PaintableBall들 추가
-        world.add(new PaintableBall(100, 100, 20, Color.RED));
-        world.add(new PaintableBall(200, 200, 30, Color.GREEN));
+        world.add(new PaintableBall(new Point(100, 100), 20, Color.RED));
+        world.add(new PaintableBall(new Point(200, 200), 30, Color.GREEN));
 
         // 그리기 수행
         world.draw(gc);
 
         // clearRect가 호출되었는지 확인
-        verify(gc).clearRect(0, 0, 800, 600);
-        // 두 개의 공이 그려졌는지 확인 (각 공당 fillOval과 strokeOval 호출)
+        verify(gc).clearRect(0, 0, world.getWidth(), world.getHeight());
+        // 두 개의 공이 그려졌는지 확인 (각 공당 fillOval 호출)
         verify(gc, times(2)).fillOval(anyDouble(), anyDouble(), anyDouble(), anyDouble());
-        verify(gc, times(2)).strokeOval(anyDouble(), anyDouble(), anyDouble(), anyDouble());
     }
 }
 ```
@@ -797,7 +787,7 @@ public class WorldTest {
        </dependency>
    </dependencies>
    ```
-   
+
    **주의**: GraphicsContext는 final 클래스이므로 mockito-inline이 필요합니다.
 
 2. **Maven 프로젝트의 경우**:
